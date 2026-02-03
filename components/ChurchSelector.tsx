@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Church } from '../types';
+import { churchApi } from '../services/api';
 import { Search, MapPin, ChevronDown, Check, Building2, ArrowRight, Settings, Plus, Trash2, Edit2, X, Save, ArrowLeft } from 'lucide-react';
 
 interface ChurchSelectorProps {
@@ -62,34 +63,39 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
     setView('form');
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if(confirm('Tem certeza que deseja excluir esta igreja? Todos os dados vinculados podem ser perdidos.')) {
-      onDelete(id);
+      try {
+        await churchApi.delete(id); // Chama o Backend
+        onDelete(id); // Atualiza a UI
+      } catch (error) {
+        alert("Erro ao excluir igreja. Verifique se existem dados vinculados.");
+        console.error(error);
+      }
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.city) return;
 
     if (editingId) {
       // Edit
-      onEdit({
-        ...formData as Church,
-        id: editingId
-      });
+      const updatedChurch = await churchApi.update(editingId, formData);
+      onEdit(updatedChurch); 
     } else {
       // Create
-      const newChurch: Church = {
-        id: Math.random().toString(36).substr(2, 9),
-        name: formData.name || '',
-        slug: formData.slug || formData.name?.toLowerCase().replace(/\s+/g, '-') || '',
-        address: formData.address || '',
-        city: formData.city || '',
-        themeColor: formData.themeColor || '#2563eb'
-      };
-      onAdd(newChurch);
-    }
+      const newChurchData = {
+          name: formData.name || '',
+          slug: formData.slug || formData.name?.toLowerCase().replace(/\s+/g, '-') || '',
+          address: formData.address || '',
+          city: formData.city || '',
+          themeColor: formData.themeColor || '#2563eb'
+        };
+        
+        const createdChurch = await churchApi.create(newChurchData);
+        onAdd(createdChurch); // Adiciona na lista com o ID real do banco
+      }
     setView('manage');
   };
 

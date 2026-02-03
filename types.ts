@@ -15,14 +15,15 @@ export enum MemberStatus {
 
 export interface Member {
   id: string;
-  churchId: string; // Multi-tenancy link
+  churchId: string;
   name: string;
   email: string;
   phone: string;
   role: string;
   status: MemberStatus;
   joinDate: string;
-  birthDate?: string; // New field
+  birthDate?: string; 
+  cpf?: string;       
 }
 
 export enum TransactionType {

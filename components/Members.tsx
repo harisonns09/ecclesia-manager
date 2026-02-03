@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Search, Plus, Edit2, Trash2, User, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Plus, Edit2, Trash2, User } from 'lucide-react'; // Removi Calendar se não estiver usando
 import { Member, MemberStatus } from '../types';
+import api from '../services/api'; // Certifique-se que o caminho está correto
 
 interface MembersProps {
   members: Member[];
@@ -10,36 +11,93 @@ interface MembersProps {
 const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [newMember, setNewMember] = useState<Partial<Member>>({
+  
+  // Adicionei o CPF no estado inicial
+  const [newMember, setNewMember] = useState({
     name: '',
     email: '',
     phone: '',
-    role: 'Membro',
+    role: 'Membro', // Isso será enviado como 'ministerio' para o Java
     status: MemberStatus.ACTIVE,
-    birthDate: ''
+    birthDate: '',
+    cpf: '' // OBRIGATÓRIO NO JAVA
   });
+
+  // 1. CARREGAR DADOS DO BACKEND
+  useEffect(() => {
+    async function loadMembers() {
+      try {
+        const response = await api.get('/api/membros');
+        // O Java retorna campos em português (nome, dataNascimento). 
+        // Precisamos converter para o formato do Typescript (name, birthDate) se os nomes forem diferentes.
+        const mappedMembers = response.data.map((item: any) => ({
+          id: item.id,
+          name: item.nome, // Mapeia 'nome' do Java para 'name' do React
+          email: item.email,
+          phone: item.telefone,
+          role: item.ministerio || 'Membro', // Mapeia 'ministerio' para 'role'
+          status: item.status,
+          birthDate: item.dataNascimento,
+          joinDate: new Date().toISOString() // O backend ainda não retorna data de entrada, mantive atual
+        }));
+        setMembers(mappedMembers);
+      } catch (error) {
+        console.error("Erro ao buscar membros:", error);
+      }
+    }
+    loadMembers();
+  }, [setMembers]);
 
   const filteredMembers = members.filter(member => 
     member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     member.role.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleAddMember = (e: React.FormEvent) => {
+  // 2. ENVIAR DADOS PARA O BACKEND
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    const member: Member = {
-      id: Math.random().toString(36).substr(2, 9),
-      churchId: '', 
-      name: newMember.name || '',
-      email: newMember.email || '',
-      phone: newMember.phone || '',
-      role: newMember.role || 'Membro',
-      status: newMember.status || MemberStatus.ACTIVE,
-      joinDate: new Date().toISOString().split('T')[0],
-      birthDate: newMember.birthDate
-    };
-    setMembers([...members, member]);
-    setShowModal(false);
-    setNewMember({ name: '', email: '', phone: '', role: 'Membro', status: MemberStatus.ACTIVE, birthDate: '' });
+
+    try {
+      // Monta o objeto EXATAMENTE como o PessoaRequestDTO.java espera
+      const payload = {
+        nome: newMember.name,
+        email: newMember.email,
+        telefone: newMember.phone,
+        ministerio: newMember.role,
+        status: newMember.status,
+        dataNascimento: newMember.birthDate, // Formato yyyy-MM-dd
+        cpf: newMember.cpf // O Backend exige isso!
+      };
+
+      const response = await api.post('/api/membros', payload);
+
+      // Se deu certo, adiciona na lista local convertendo de volta para o padrão do frontend
+      const savedMember = response.data; // O Java retorna o PessoaResponseDTO
+      
+      const memberForFrontend: Member = {
+        id: savedMember.id,
+        churchId: '', 
+        name: savedMember.nome,
+        email: savedMember.email,
+        phone: savedMember.telefone,
+        role: savedMember.ministerio,
+        status: savedMember.status as MemberStatus,
+        joinDate: new Date().toISOString().split('T')[0],
+        birthDate: savedMember.dataNascimento
+      };
+
+      setMembers([...members, memberForFrontend]);
+      setShowModal(false);
+      
+      // Limpa o form
+      setNewMember({ 
+        name: '', email: '', phone: '', role: 'Membro', status: MemberStatus.ACTIVE, birthDate: '', cpf: '' 
+      });
+
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar membro. Verifique se o CPF é válido e se todos os campos estão preenchidos.");
+    }
   };
 
   const getStatusColor = (status: MemberStatus) => {
@@ -65,6 +123,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* ... Barra de Busca (igual ao original) ... */}
         <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
@@ -80,13 +139,14 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
 
         <div className="overflow-x-auto">
           <table className="w-full text-left">
+             {/* ... Cabeçalho da Tabela (igual ao original) ... */}
             <thead>
               <tr className="bg-gray-50 text-gray-500 text-sm font-medium">
                 <th className="px-6 py-3">Nome</th>
                 <th className="px-6 py-3">Contato</th>
                 <th className="px-6 py-3">Cargo</th>
                 <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Data Entrada</th>
+                <th className="px-6 py-3">Nascimento</th> {/* Alterei de Data Entrada para Nascimento pois é o dado que temos */}
                 <th className="px-6 py-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -96,7 +156,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mr-3 font-semibold">
-                        {member.name.charAt(0)}
+                        {member.name ? member.name.charAt(0) : '?'}
                       </div>
                       <div className="font-medium text-gray-900">{member.name}</div>
                     </div>
@@ -112,7 +172,8 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500">
-                    {new Date(member.joinDate).toLocaleDateString('pt-BR')}
+                     {/* Tratamento para data pois vem string do JSON */}
+                    {member.birthDate ? new Date(member.birthDate).toLocaleDateString('pt-BR') : '-'}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button className="text-gray-400 hover:text-blue-600 mr-2">
@@ -139,7 +200,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
         </div>
       </div>
 
-      {/* Add Member Modal */}
+      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
@@ -152,7 +213,10 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                 <span className="text-2xl">&times;</span>
               </button>
             </div>
+            
             <form onSubmit={handleAddMember} className="p-6 space-y-4">
+              
+              {/* Campo Nome */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
                 <input 
@@ -163,20 +227,39 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                   onChange={e => setNewMember({...newMember, name: e.target.value})}
                 />
               </div>
+
+              {/* NOVO CAMPO CPF (OBRIGATÓRIO PELO JAVA) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">CPF</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="000.000.000-00"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={newMember.cpf}
+                  onChange={e => setNewMember({...newMember, cpf: e.target.value})}
+                />
+              </div>
+
+              {/* Campo Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input 
                   type="email" 
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={newMember.email}
                   onChange={e => setNewMember({...newMember, email: e.target.value})}
                 />
               </div>
+
+              {/* Telefones e Data */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Telefone</label>
                   <input 
                     type="tel" 
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={newMember.phone}
                     onChange={e => setNewMember({...newMember, phone: e.target.value})}
@@ -186,12 +269,15 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                    <label className="block text-sm font-medium text-gray-700 mb-1">Data de Nascimento</label>
                    <input 
                     type="date"
+                    required
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     value={newMember.birthDate}
                     onChange={e => setNewMember({...newMember, birthDate: e.target.value})}
                    />
                 </div>
               </div>
+
+              {/* Cargo e Status */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
@@ -220,6 +306,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers }) => {
                   </select>
                 </div>
               </div>
+
               <div className="pt-4 flex justify-end space-x-3">
                 <button 
                   type="button" 

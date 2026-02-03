@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -8,139 +8,111 @@ import Events from './components/Events';
 import PublicHome from './components/PublicHome';
 import Login from './components/Login';
 import CookieConsent from './components/CookieConsent';
-// import AIAssistant from './components/AIAssistant';
 import EventRegistrationPage from './components/EventRegistrationPage';
 import ChurchSelector from './components/ChurchSelector';
 import Ministries from './components/Ministries';
-import SmallGroups from './components/SmallGroups'; // New
-import PrayerWall from './components/PrayerWall'; // New
+import SmallGroups from './components/SmallGroups'; 
+import PrayerWall from './components/PrayerWall'; 
 import { Menu } from 'lucide-react';
-import { Member, MemberStatus, Transaction, TransactionType, TransactionCategory, Event, EventRegistration, Church, Ministry, Scale, SmallGroup, PrayerRequest } from './types';
+import { Member, Transaction, Event, EventRegistration, Church, Ministry, Scale, SmallGroup, PrayerRequest } from './types';
 
-// --- MOCK DATA FOR MULTI-TENANCY ---
-
-const INITIAL_CHURCHES: Church[] = [
-  { 
-    id: 'c1', 
-    name: 'Igreja Central da Cidade', 
-    slug: 'central', 
-    address: 'Av. Paulista, 1000', 
-    city: 'São Paulo - SP',
-    themeColor: '#2563eb' // Blue
-  },
-  { 
-    id: 'c2', 
-    name: 'Comunidade da Paz', 
-    slug: 'paz', 
-    address: 'Rua das Flores, 45', 
-    city: 'Rio de Janeiro - RJ',
-    themeColor: '#059669' // Emerald
-  },
-  { 
-    id: 'c3', 
-    name: 'Igreja Batista Renovada', 
-    slug: 'renovada', 
-    address: 'Av. Afonso Pena, 300', 
-    city: 'Belo Horizonte - MG',
-    themeColor: '#7c3aed' // Violet
-  }
-];
-
-const MOCK_MEMBERS: Member[] = [
-  // Church 1
-  { id: '1', churchId: 'c1', name: 'João Silva', email: 'joao@email.com', phone: '(11) 99999-0000', role: 'Diácono', status: MemberStatus.ACTIVE, joinDate: '2023-01-15', birthDate: '1985-10-15' },
-  { id: '2', churchId: 'c1', name: 'Maria Santos', email: 'maria@email.com', phone: '(11) 98888-1111', role: 'Membro', status: MemberStatus.ACTIVE, joinDate: '2023-03-20', birthDate: '1990-05-22' },
-  { id: '5', churchId: 'c1', name: 'Lucas Pereira', email: 'lucas@email.com', phone: '(11) 97777-6666', role: 'Músico', status: MemberStatus.ACTIVE, joinDate: '2022-01-10', birthDate: '1995-10-28' }, 
-  // Church 2
-  { id: '3', churchId: 'c2', name: 'Pedro Oliveira', email: 'pedro@email.com', phone: '(21) 97777-2222', role: 'Pastor', status: MemberStatus.ACTIVE, joinDate: '2022-11-05', birthDate: '1978-12-01' },
-  { id: '4', churchId: 'c2', name: 'Ana Costa', email: 'ana@email.com', phone: '(21) 96666-3333', role: 'Membro', status: MemberStatus.INACTIVE, joinDate: '2023-05-10' },
-];
-
-const MOCK_TRANSACTIONS: Transaction[] = [
-  // Church 1
-  { id: '1', churchId: 'c1', description: 'Dízimos Culto Domingo', amount: 3500.00, type: TransactionType.INCOME, category: TransactionCategory.TITHE, date: '2023-10-01' },
-  { id: '2', churchId: 'c1', description: 'Conta de Luz', amount: 450.00, type: TransactionType.EXPENSE, category: TransactionCategory.UTILITIES, date: '2023-10-05' },
-  // Church 2
-  { id: '3', churchId: 'c2', description: 'Ofertas Missões', amount: 1200.00, type: TransactionType.INCOME, category: TransactionCategory.OFFERING, date: '2023-10-08' },
-  { id: '4', churchId: 'c2', description: 'Aluguel Equipamento Som', amount: 200.00, type: TransactionType.EXPENSE, category: TransactionCategory.MAINTENANCE, date: '2023-10-10' },
-];
-
-const MOCK_EVENTS: Event[] = [
-  // Church 1
-  { 
-    id: '1', 
-    churchId: 'c1',
-    title: 'Culto da Família', 
-    date: '2023-10-29', 
-    time: '19:00', 
-    description: 'Culto especial com Santa Ceia', 
-    location: 'Templo Principal',
-    price: 0,
-    registrations: []
-  },
-  // Church 2
-  { 
-    id: '2', 
-    churchId: 'c2',
-    title: 'Retiro Espiritual', 
-    date: '2023-11-15', 
-    time: '08:00', 
-    description: 'Retiro de 3 dias no sítio.', 
-    location: 'Sítio Vale das Bênçãos',
-    price: 250.00,
-    registrations: []
-  },
-];
-
-const MOCK_MINISTRIES: Ministry[] = [
-  { id: 'm1', churchId: 'c1', name: 'Louvor', leaderName: 'Lucas Pereira', description: 'Equipe de música', color: '#8B5CF6' },
-  { id: 'm2', churchId: 'c1', name: 'Recepção', leaderName: 'João Silva', description: 'Equipe de boas-vindas', color: '#F59E0B' },
-];
-
-const MOCK_SCALES: Scale[] = [
-  { id: 's1', churchId: 'c1', ministryId: 'm1', date: '2023-10-29', title: 'Culto da Família', volunteers: ['5', '2'] }
-];
-
-const MOCK_GROUPS: SmallGroup[] = [
-  { id: 'g1', churchId: 'c1', name: 'Célula Morumbi', leaderName: 'Carlos Souza', hostName: 'Família Souza', address: 'Rua A, 123', dayOfWeek: 'Quarta-feira', time: '20:00', neighborhood: 'Morumbi' },
-  { id: 'g2', churchId: 'c1', name: 'GC Jovens', leaderName: 'Lucas Pereira', hostName: 'Salão da Igreja', address: 'Av. Paulista, 1000', dayOfWeek: 'Sábado', time: '17:00', neighborhood: 'Centro' }
-];
-
-const MOCK_REQUESTS: PrayerRequest[] = [
-  { id: 'p1', churchId: 'c1', authorName: 'Maria Santos', request: 'Peço oração pela saúde da minha mãe que fará uma cirurgia.', category: 'Saúde', date: '2023-10-25', prayedCount: 5, isAnonymous: false },
-  { id: 'p2', churchId: 'c1', authorName: 'Anônimo', request: 'Orem por uma porta de emprego.', category: 'Financeiro', date: '2023-10-26', prayedCount: 12, isAnonymous: true }
-];
+// Importando sua API configurada
+import { 
+  churchApi, 
+  memberApi, 
+  transactionApi, 
+  eventApi, 
+  ministryApi, 
+  scaleApi, 
+  smallGroupApi, 
+  prayerRequestApi 
+} from './services/api';
 
 const App: React.FC = () => {
-  // Application State
-  const [churchesList, setChurchesList] = useState<Church[]>(INITIAL_CHURCHES);
+  // --- APPLICATION STATE ---
+  const [churchesList, setChurchesList] = useState<Church[]>([]);
   const [currentChurch, setCurrentChurch] = useState<Church | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeTab, setActiveTab] = useState('home');
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  
+  const [isLoading, setIsLoading] = useState(true);
+
+  // --- DATA STATE (Agora armazenam apenas os dados da igreja atual) ---
+  const [members, setMembers] = useState<Member[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [ministries, setMinistries] = useState<Ministry[]>([]);
+  const [scales, setScales] = useState<Scale[]>([]);
+  const [smallGroups, setSmallGroups] = useState<SmallGroup[]>([]);
+  const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>([]);
+
   // Navigation State
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 
-  // Global Data State
-  const [members, setMembers] = useState<Member[]>(MOCK_MEMBERS);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [events, setEvents] = useState<Event[]>(MOCK_EVENTS);
-  const [ministries, setMinistries] = useState<Ministry[]>(MOCK_MINISTRIES);
-  const [scales, setScales] = useState<Scale[]>(MOCK_SCALES);
-  const [smallGroups, setSmallGroups] = useState<SmallGroup[]>(MOCK_GROUPS);
-  const [prayerRequests, setPrayerRequests] = useState<PrayerRequest[]>(MOCK_REQUESTS);
+  // 1. EFEITO: CARREGAR LISTA DE IGREJAS AO INICIAR
+  useEffect(() => {
+    loadChurches();
+  }, []);
 
-  // --- FILTERED DATA FOR CURRENT CHURCH ---
-  const currentMembers = useMemo(() => members.filter(m => m.churchId === currentChurch?.id), [members, currentChurch]);
-  const currentTransactions = useMemo(() => transactions.filter(t => t.churchId === currentChurch?.id), [transactions, currentChurch]);
-  const currentEvents = useMemo(() => events.filter(e => e.churchId === currentChurch?.id), [events, currentChurch]);
-  const currentMinistries = useMemo(() => ministries.filter(m => m.churchId === currentChurch?.id), [ministries, currentChurch]);
-  const currentScales = useMemo(() => scales.filter(s => s.churchId === currentChurch?.id), [scales, currentChurch]);
-  const currentGroups = useMemo(() => smallGroups.filter(g => g.churchId === currentChurch?.id), [smallGroups, currentChurch]);
-  const currentRequests = useMemo(() => prayerRequests.filter(r => r.churchId === currentChurch?.id), [prayerRequests, currentChurch]);
+  const loadChurches = async () => {
+    try {
+      const data = await churchApi.getAll();
+      setChurchesList(data);
+    } catch (error) {
+      console.error("Erro ao carregar igrejas:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // Auth Handling
+  // 2. EFEITO: CARREGAR DADOS DA IGREJA SELECIONADA (Se autenticado)
+  useEffect(() => {
+    if (currentChurch && isAuthenticated) {
+      loadChurchData(currentChurch.id);
+    }
+  }, [currentChurch, isAuthenticated]);
+
+  // 3. EFEITO: CARREGAR EVENTOS PÚBLICOS (Mesmo sem login)
+  useEffect(() => {
+    if (currentChurch && !isAuthenticated) {
+      // Carrega apenas eventos para a Home Pública
+      eventApi.getByChurch(currentChurch.id)
+        .then(data => setEvents(data))
+        .catch(err => console.error("Erro ao carregar eventos públicos", err));
+    }
+  }, [currentChurch, isAuthenticated]);
+
+  const loadChurchData = async (churchId: string) => {
+    try {
+      const [membrosData, transData, eventosData, minData, escalasData, celulasData, oracoesData] = await Promise.all([
+        memberApi.getByChurch(churchId),
+        transactionApi.getByChurch(churchId),
+        eventApi.getByChurch(churchId),
+        ministryApi.getByChurch(churchId),
+        scaleApi.getByChurch(churchId),
+        smallGroupApi.getByChurch(churchId),
+        prayerRequestApi.getByChurch(churchId)
+      ]);
+
+      setMembers(membrosData);
+      setTransactions(transData);
+      setEvents(eventosData);
+      setMinistries(minData);
+      setScales(escalasData);
+      setSmallGroups(celulasData);
+      setPrayerRequests(oracoesData);
+
+    } catch (error) {
+      console.error("Erro ao carregar dados do dashboard:", error);
+      // Se der erro (ex: token inválido), talvez deslogar
+      if ((error as any).response?.status === 403) {
+        handleLogout();
+      }
+    }
+  };
+
+  // --- HANDLERS ---
+
   const handleLogin = (status: boolean) => {
     if (status) {
       setIsAuthenticated(true);
@@ -149,24 +121,33 @@ const App: React.FC = () => {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('church_token'); // Remove token
     setIsAuthenticated(false);
     setActiveTab('home'); 
+    // Limpa estados sensíveis
+    setMembers([]);
+    setTransactions([]);
   };
 
-  // Church Management Handlers
-  const handleAddChurch = (church: Church) => {
-    setChurchesList([...churchesList, church]);
+  // Manipulação de Igrejas
+  const handleAddChurch = async (church: Church) => {
+    try {
+      // O ChurchSelector já chama a API, aqui só atualizamos a lista local
+      await loadChurches(); 
+    } catch (error) {
+      console.error("Erro ao atualizar lista de igrejas", error);
+    }
   };
 
-  const handleEditChurch = (church: Church) => {
-    setChurchesList(churchesList.map(c => c.id === church.id ? church : c));
+  const handleEditChurch = async (church: Church) => {
+    await loadChurches();
     if (currentChurch?.id === church.id) {
       setCurrentChurch(church);
     }
   };
 
-  const handleDeleteChurch = (id: string) => {
-    setChurchesList(churchesList.filter(c => c.id !== id));
+  const handleDeleteChurch = async (id: string) => {
+    await loadChurches();
     if (currentChurch?.id === id) {
       setCurrentChurch(null);
     }
@@ -180,64 +161,18 @@ const App: React.FC = () => {
   };
 
   const handleRegisterUser = (registration: EventRegistration) => {
-    if (selectedEvent) {
-      const updatedEvents = events.map(ev => {
-        if (ev.id === selectedEvent.id) {
-          return {
-            ...ev,
-            registrations: [...(ev.registrations || []), registration]
-          };
-        }
-        return ev;
-      });
-      setEvents(updatedEvents);
+    // A lógica de API para registrar deve estar dentro do componente EventRegistrationPage
+    // Aqui apenas atualizamos o estado local para refletir na UI se necessário
+    if (selectedEvent && currentChurch) {
+        // Recarrega eventos para mostrar contagem atualizada
+        eventApi.getByChurch(currentChurch.id).then(setEvents);
     }
   };
 
-  // Data Update Handlers (Simulated Backend)
-  const handleUpdateMembers = (newMembers: React.SetStateAction<Member[]>) => {
-    if (typeof newMembers !== 'function') {
-      const otherChurchMembers = members.filter(m => m.churchId !== currentChurch?.id);
-      const validNewMembers = newMembers.map(m => ({...m, churchId: currentChurch?.id || ''}));
-      setMembers([...otherChurchMembers, ...validNewMembers]);
-    }
-  };
-  
-  const handleUpdateTransactions = (newTransactions: React.SetStateAction<Transaction[]>) => {
-    if (typeof newTransactions !== 'function') {
-       const otherChurchTrans = transactions.filter(t => t.churchId !== currentChurch?.id);
-       const validNewTrans = newTransactions.map(t => ({...t, churchId: currentChurch?.id || ''}));
-       setTransactions([...otherChurchTrans, ...validNewTrans]);
-    }
-  };
-
-  const handleUpdateEvents = (newEvents: React.SetStateAction<Event[]>) => {
-    if (typeof newEvents !== 'function') {
-       const otherChurchEvents = events.filter(e => e.churchId !== currentChurch?.id);
-       const validNewEvents = newEvents.map(e => ({...e, churchId: currentChurch?.id || ''}));
-       setEvents([...otherChurchEvents, ...validNewEvents]);
-    }
-  };
-
-  const handleUpdateMinistries = (newMinistries: Ministry[]) => {
-      const other = ministries.filter(m => m.churchId !== currentChurch?.id);
-      setMinistries([...other, ...newMinistries]);
-  };
-
-  const handleUpdateScales = (newScales: Scale[]) => {
-      const other = scales.filter(s => s.churchId !== currentChurch?.id);
-      setScales([...other, ...newScales]);
-  };
-
-  const handleUpdateGroups = (newGroups: SmallGroup[]) => {
-    const other = smallGroups.filter(g => g.churchId !== currentChurch?.id);
-    setSmallGroups([...other, ...newGroups]);
-  };
-
-  const handleUpdateRequests = (newRequests: PrayerRequest[]) => {
-    const other = prayerRequests.filter(r => r.churchId !== currentChurch?.id);
-    setPrayerRequests([...other, ...newRequests]);
-  };
+  // --- RENDER: LOADING ---
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">Carregando sistema...</div>;
+  }
 
   // --- RENDER: CHURCH SELECTOR (PORTAL) ---
   if (!currentChurch) {
@@ -278,34 +213,41 @@ const App: React.FC = () => {
 
           <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 p-4 md:p-8">
             <div className="max-w-7xl mx-auto h-full animate-in fade-in duration-300">
-              {activeTab === 'dashboard' && <Dashboard members={currentMembers} transactions={currentTransactions} eventsCount={currentEvents.length} />}
-              {activeTab === 'members' && <Members members={currentMembers} setMembers={handleUpdateMembers} />}
+              {activeTab === 'dashboard' && <Dashboard members={members} transactions={transactions} eventsCount={events.length} />}
+              
+              {/* Note: Passamos setMembers para manter compatibilidade, mas idealmente os componentes filhos chamariam a API e depois atualizariam o estado */}
+              {activeTab === 'members' && <Members members={members} setMembers={setMembers} />}
+              
               {activeTab === 'ministries' && (
                 <Ministries 
-                  ministries={currentMinistries} 
-                  setMinistries={handleUpdateMinistries}
-                  scales={currentScales}
-                  setScales={handleUpdateScales}
-                  members={currentMembers}
+                  ministries={ministries} 
+                  setMinistries={setMinistries}
+                  scales={scales}
+                  setScales={setScales}
+                  members={members}
                   churchId={currentChurch.id}
                 />
               )}
+              
               {activeTab === 'small-groups' && (
                 <SmallGroups 
-                  groups={currentGroups} 
-                  setGroups={handleUpdateGroups} 
+                  groups={smallGroups} 
+                  setGroups={setSmallGroups} 
                   churchId={currentChurch.id} 
                 />
               )}
+              
               {activeTab === 'prayer-wall' && (
                 <PrayerWall 
-                  requests={currentRequests} 
-                  setRequests={handleUpdateRequests} 
+                  requests={prayerRequests} 
+                  setRequests={setPrayerRequests} 
                   churchId={currentChurch.id} 
                 />
               )}
-              {activeTab === 'financial' && <Financials transactions={currentTransactions} setTransactions={handleUpdateTransactions} />}
-              {activeTab === 'events' && <Events events={currentEvents} setEvents={handleUpdateEvents} isAdmin={true} />}
+              
+              {activeTab === 'financial' && <Financials transactions={transactions} setTransactions={setTransactions} />}
+              
+              {activeTab === 'events' && <Events events={events} setEvents={setEvents} isAdmin={true} />}
               
             </div>
           </main>
@@ -333,7 +275,7 @@ const App: React.FC = () => {
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-300">
           {activeTab === 'home' && (
             <PublicHome 
-              events={currentEvents} 
+              events={events} 
               onNavigateToEvents={() => { setActiveTab('events'); window.scrollTo(0,0); }}
               onNavigateToRegistration={handleNavigateToRegistration}
             />
@@ -341,8 +283,8 @@ const App: React.FC = () => {
           
           {activeTab === 'events' && (
             <Events 
-              events={currentEvents} 
-              setEvents={handleUpdateEvents} 
+              events={events} 
+              setEvents={setEvents} 
               isAdmin={false} 
               onRegisterClick={handleNavigateToRegistration} 
             />
