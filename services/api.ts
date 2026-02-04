@@ -3,7 +3,8 @@ import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest,
 
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
-  baseURL: 'http://localhost:8080', 
+  // baseURL: 'http://localhost:8080', 
+  baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com/api',
 });
 
 // Interceptador para adicionar o Token automaticamente em toda requisição
