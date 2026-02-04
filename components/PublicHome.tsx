@@ -93,16 +93,16 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEve
             <Calendar size={48} className="text-blue-600 mb-2" />
             <span className="text-sm font-bold text-gray-500 uppercase tracking-wider">Próximo Evento</span>
             <div className="text-3xl font-bold text-gray-900 mt-1">
-               {new Date(nextEvent.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+               {new Date(nextEvent.dataEvento).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
             </div>
           </div>
           <div className="p-8 flex-1 flex flex-col justify-center">
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">{nextEvent.title}</h3>
-            <p className="text-gray-600 mb-4">{nextEvent.description}</p>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{nextEvent.nomeEvento}</h3>
+            <p className="text-gray-600 mb-4">{nextEvent.descricao}</p>
             <div className="flex items-center gap-4 text-sm text-gray-500">
-               <span className="flex items-center"><Clock size={16} className="mr-1" /> {nextEvent.time}</span>
-               <span className="flex items-center"><MapPin size={16} className="mr-1" /> {nextEvent.location}</span>
-               {(nextEvent.price || 0) > 0 && <span className="font-bold text-emerald-600">R$ {nextEvent.price?.toFixed(2)}</span>}
+               <span className="flex items-center"><Clock size={16} className="mr-1" /> {nextEvent.horario}</span>
+               <span className="flex items-center"><MapPin size={16} className="mr-1" /> {nextEvent.local}</span>
+               {(nextEvent.preco || 0) > 0 && <span className="font-bold text-emerald-600">R$ {nextEvent.preco?.toFixed(2)}</span>}
             </div>
             <button 
               onClick={() => onNavigateToRegistration(nextEvent)}

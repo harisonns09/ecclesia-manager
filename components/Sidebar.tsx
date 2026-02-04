@@ -52,7 +52,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="flex items-center space-x-2">
             <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-              style={{ backgroundColor: currentChurch?.themeColor || '#2563eb' }}
             >
               {currentChurch?.name.charAt(0) || 'E'}
             </div>
