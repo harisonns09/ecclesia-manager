@@ -17,7 +17,7 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
     lgpdConsent: false
   });
 
-  const isPaidEvent = (event.price || 0) > 0;
+  const isPaidEvent = (event.preco || 0) > 0;
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Inscrição Confirmada!</h2>
           <p className="text-gray-600 mb-8 text-lg">
-            Parabéns, <strong>{formData.name}</strong>. Sua presença no evento <strong>{event.title}</strong> está garantida.
+            Parabéns, <strong>{formData.name}</strong>. Sua presença no evento <strong>{event.nomeEvento}</strong> está garantida.
             <br />
             Enviamos os detalhes para o email: {formData.email}.
           </p>
@@ -87,12 +87,12 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
             <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo do Pedido</h3>
               <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <span className="text-gray-600">{event.title} (Inscrição)</span>
-                <span className="font-medium text-gray-900">R$ {event.price?.toFixed(2)}</span>
+                <span className="text-gray-600">{event.nomeEvento} (Inscrição)</span>
+                <span className="font-medium text-gray-900">R$ {event.preco?.toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center py-4 text-xl font-bold text-emerald-600">
                 <span>Total</span>
-                <span>R$ {event.price?.toFixed(2)}</span>
+                <span>R$ {event.preco?.toFixed(2)}</span>
               </div>
             </div>
 
@@ -141,24 +141,24 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
         {/* Event Info Sidebar */}
         <div className="md:col-span-1">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-24">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">{event.title}</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{event.nomeEvento}</h2>
             <div className="space-y-4 text-sm text-gray-600">
               <div className="flex items-center">
                 <Calendar size={18} className="mr-3 text-blue-600" />
-                <span>{new Date(event.date).toLocaleDateString('pt-BR')}</span>
+                <span>{new Date(event.dataEvento).toLocaleDateString('pt-BR')}</span>
               </div>
               <div className="flex items-center">
                 <Clock size={18} className="mr-3 text-blue-600" />
-                <span>{event.time}</span>
+                <span>{event.horario}</span>
               </div>
               <div className="flex items-center">
                 <MapPin size={18} className="mr-3 text-blue-600" />
-                <span>{event.location}</span>
+                <span>{event.local}</span>
               </div>
               {isPaidEvent && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <p className="text-gray-500 mb-1">Valor da Inscrição</p>
-                  <p className="text-2xl font-bold text-emerald-600">R$ {event.price?.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-emerald-600">R$ {event.preco?.toFixed(2)}</p>
                 </div>
               )}
             </div>

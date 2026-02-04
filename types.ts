@@ -63,13 +63,13 @@ export interface EventRegistration {
 export interface Event {
   id: string;
   churchId: string; // Multi-tenancy link
-  title: string;
-  date: string;
-  time: string;
-  description: string;
-  location: string;
-  price?: number;
-  registrations?: EventRegistration[]; 
+  nomeEvento: string;
+  dataEvento: string;
+  horario: string;
+  descricao: string;
+  local: string;
+  preco?: number;
+  inscricoes?: EventRegistration[]; 
 }
 
 export interface ChatMessage {
