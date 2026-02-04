@@ -1,303 +1,223 @@
-import React, { useState } from 'react';
-import { Users, Calendar, Plus, Trash2, UserPlus, Shield, Music, Heart, BookOpen } from 'lucide-react';
-import { Ministry, Scale, Member } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Users, Plus, Trash2, Edit2, Save, X, User } from 'lucide-react';
+import { Ministry, Member } from '../types';
+import { ministryApi, memberApi } from '../services/api';
 
 interface MinistriesProps {
-  ministries: Ministry[];
-  setMinistries: (ministries: Ministry[]) => void;
-  scales: Scale[];
-  setScales: (scales: Scale[]) => void;
-  members: Member[];
   churchId: string;
 }
 
-const Ministries: React.FC<MinistriesProps> = ({ 
-  ministries, 
-  setMinistries, 
-  scales, 
-  setScales, 
-  members,
-  churchId
-}) => {
-  const [activeMinistryId, setActiveMinistryId] = useState<string | null>(null);
-  const [showMinistryModal, setShowMinistryModal] = useState(false);
-  const [showScaleModal, setShowScaleModal] = useState(false);
+const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
+  const [ministries, setMinistries] = useState<Ministry[]>([]);
+  const [members, setMembers] = useState<Member[]>([]); // Para selecionar líderes
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado do Formulário
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Partial<Ministry>>({ 
+    name: '', 
+    leaderName: '', 
+    description: '' 
+  });
 
-  // Form States
-  const [newMinistry, setNewMinistry] = useState<Partial<Ministry>>({ name: '', leaderName: '', color: '#3B82F6' });
-  const [newScale, setNewScale] = useState<Partial<Scale>>({ date: '', title: '', volunteers: [] });
+  // Carregar dados ao iniciar ou mudar de igreja
+  useEffect(() => {
+    if (churchId) {
+      loadData();
+    }
+  }, [churchId]);
 
-  const activeMinistry = ministries.find(m => m.id === activeMinistryId);
-  const activeScales = scales.filter(s => s.ministryId === activeMinistryId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-  const handleCreateMinistry = (e: React.FormEvent) => {
-    e.preventDefault();
-    const ministry: Ministry = {
-      id: Math.random().toString(36).substr(2, 9),
-      churchId,
-      name: newMinistry.name || 'Novo Ministério',
-      leaderName: newMinistry.leaderName || '',
-      description: newMinistry.description || '',
-      color: newMinistry.color || '#3B82F6'
-    };
-    setMinistries([...ministries, ministry]);
-    setShowMinistryModal(false);
-    setNewMinistry({ name: '', leaderName: '', color: '#3B82F6' });
-  };
-
-  const handleCreateScale = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!activeMinistryId) return;
-
-    const scale: Scale = {
-      id: Math.random().toString(36).substr(2, 9),
-      churchId,
-      ministryId: activeMinistryId,
-      date: newScale.date || new Date().toISOString().split('T')[0],
-      title: newScale.title || 'Escala',
-      volunteers: newScale.volunteers || []
-    };
-    setScales([...scales, scale]);
-    setShowScaleModal(false);
-    setNewScale({ date: '', title: '', volunteers: [] });
-  };
-
-  const toggleVolunteer = (memberId: string) => {
-    const currentList = newScale.volunteers || [];
-    if (currentList.includes(memberId)) {
-      setNewScale({ ...newScale, volunteers: currentList.filter(id => id !== memberId) });
-    } else {
-      setNewScale({ ...newScale, volunteers: [...currentList, memberId] });
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      // Buscamos Ministérios e Membros em paralelo
+      const [ministriesData, membersData] = await Promise.all([
+        ministryApi.getByChurch(churchId),
+        memberApi.getByChurch(churchId)
+      ]);
+      
+      setMinistries(ministriesData);
+      setMembers(membersData);
+    } catch (error) {
+      console.error("Erro ao carregar dados dos ministérios:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getMinistryIcon = (name: string) => {
-    const n = name.toLowerCase();
-    if (n.includes('louvor') || n.includes('música')) return <Music size={24} />;
-    if (n.includes('infantil') || n.includes('kids')) return <Heart size={24} />;
-    if (n.includes('ensino') || n.includes('biblia')) return <BookOpen size={24} />;
-    return <Users size={24} />;
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!churchId) return;
+
+    try {
+      if (editingId) {
+        // Editar
+        const updated = await ministryApi.update(churchId, editingId, formData);
+        setMinistries(prev => prev.map(m => m.id === editingId ? updated : m));
+        alert("Ministério atualizado!");
+      } else {
+        // Criar
+        const created = await ministryApi.create(churchId, formData as Ministry);
+        setMinistries(prev => [...prev, created]);
+        alert("Ministério criado!");
+      }
+      resetForm();
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      alert("Erro ao salvar ministério.");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este ministério?")) return;
+    
+    try {
+      await ministryApi.delete(churchId, id);
+      setMinistries(prev => prev.filter(m => m.id !== id));
+    } catch (error) {
+      console.error("Erro ao excluir:", error);
+      alert("Erro ao excluir ministério.");
+    }
+  };
+
+  const startEdit = (ministry: Ministry) => {
+    setEditingId(ministry.id);
+    setFormData(ministry);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({ name: '', leaderName: '', description: '' });
+    setShowForm(false);
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Ministérios e Escalas</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+          <Users className="mr-2 text-purple-600" /> Ministérios e Grupos
+        </h2>
         <button 
-          onClick={() => setShowMinistryModal(true)}
-          className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          onClick={() => { resetForm(); setShowForm(!showForm); }} 
+          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center shadow-sm transition-colors"
         >
-          <Plus size={20} className="mr-2" />
-          Novo Ministério
+          {showForm ? <X size={20} className="mr-2" /> : <Plus size={20} className="mr-2" />}
+          {showForm ? 'Cancelar' : 'Novo Ministério'}
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Sidebar List of Ministries */}
-        <div className="lg:col-span-1 space-y-3">
-          {ministries.map(ministry => (
-            <div 
-              key={ministry.id}
-              onClick={() => setActiveMinistryId(ministry.id)}
-              className={`p-4 rounded-xl border cursor-pointer transition-all duration-200 flex items-center justify-between group ${
-                activeMinistryId === ministry.id 
-                  ? 'bg-white border-blue-500 shadow-md ring-1 ring-blue-500' 
-                  : 'bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm'
-              }`}
-            >
-              <div className="flex items-center">
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-white shadow-sm mr-3"
-                  style={{ backgroundColor: ministry.color }}
-                >
-                  {getMinistryIcon(ministry.name)}
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800">{ministry.name}</h3>
-                  <p className="text-xs text-gray-500 flex items-center">
-                    <Shield size={10} className="mr-1" />
-                    {ministry.leaderName || 'Sem líder'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {ministries.length === 0 && (
-            <div className="p-6 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-              Nenhum ministério criado.
-            </div>
-          )}
-        </div>
+      {/* Formulário */}
+      {showForm && (
+        <div className="bg-white p-6 rounded-xl border border-purple-100 shadow-lg">
+           <h3 className="font-bold mb-4 text-gray-700">{editingId ? 'Editar' : 'Cadastrar'} Ministério</h3>
+           <form onSubmit={handleSubmit} className="space-y-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                 <input 
+                    placeholder="Ex: Louvor, Infantil, Recepção" 
+                    className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" 
+                    value={formData.name} 
+                    onChange={e => setFormData({...formData, name: e.target.value})} 
+                    required 
+                 />
+               </div>
+               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-1">Líder Responsável</label>
+                 {/* Dropdown se houver membros, senão input texto */}
+                 {members.length > 0 ? (
+                   <div className="relative">
+                     <select 
+                       className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none appearance-none bg-white"
+                       value={formData.leaderName}
+                       onChange={e => setFormData({...formData, leaderName: e.target.value})}
+                     >
+                       <option value="">Selecione um líder...</option>
+                       {members.map(m => (
+                         <option key={m.id} value={m.nome}>{m.nome}</option>
+                       ))}
+                     </select>
+                     <User size={16} className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
+                   </div>
+                 ) : (
+                   <input 
+                      placeholder="Nome do líder" 
+                      className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" 
+                      value={formData.leaderName} 
+                      onChange={e => setFormData({...formData, leaderName: e.target.value})} 
+                   />
+                 )}
+               </div>
+             </div>
+             
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+               <textarea 
+                  placeholder="Objetivo e atividades do ministério..." 
+                  className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-none h-24" 
+                  value={formData.description} 
+                  onChange={e => setFormData({...formData, description: e.target.value})} 
+               />
+             </div>
 
-        {/* Main Content Area */}
-        <div className="lg:col-span-3">
-          {activeMinistry ? (
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden min-h-[500px] flex flex-col">
-              {/* Header */}
-              <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    {activeMinistry.name}
-                    <span className="text-xs font-normal bg-white border px-2 py-0.5 rounded-full text-gray-500">
-                      {activeScales.length} escalas agendadas
-                    </span>
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1">Liderado por {activeMinistry.leaderName}</p>
-                </div>
-                <button 
-                  onClick={() => setShowScaleModal(true)}
-                  className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium flex items-center transition-colors"
-                >
-                  <Calendar size={16} className="mr-2" />
-                  Agendar Escala
-                </button>
-              </div>
-
-              {/* Scales List */}
-              <div className="p-6 flex-1 bg-gray-50/50 overflow-y-auto">
-                {activeScales.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                    <Calendar size={48} className="mb-4 opacity-20" />
-                    <p>Nenhuma escala agendada para este ministério.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {activeScales.map(scale => (
-                      <div key={scale.id} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex justify-between items-start mb-4">
-                          <div>
-                            <div className="flex items-center text-blue-600 font-bold mb-1">
-                               <Calendar size={16} className="mr-2" />
-                               {new Date(scale.date).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'long' })}
-                            </div>
-                            <h4 className="text-gray-900 font-semibold">{scale.title}</h4>
-                          </div>
-                          <button 
-                             onClick={() => setScales(scales.filter(s => s.id !== scale.id))}
-                             className="text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Voluntários</p>
-                          <div className="flex flex-wrap gap-2">
-                            {scale.volunteers.map(volId => {
-                              const member = members.find(m => m.id === volId);
-                              return member ? (
-                                <div key={volId} className="flex items-center bg-gray-100 px-2 py-1 rounded-md text-sm text-gray-700">
-                                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 text-xs flex items-center justify-center mr-2 font-bold">
-                                    {member.name.charAt(0)}
-                                  </div>
-                                  {member.name.split(' ')[0]}
-                                </div>
-                              ) : null;
-                            })}
-                            {scale.volunteers.length === 0 && <span className="text-sm text-red-400 italic">Ninguém escalado</span>}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="h-full bg-white rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 p-8">
-              <Users size={64} className="mb-4 text-gray-300" />
-              <h3 className="text-lg font-medium text-gray-700">Selecione um Ministério</h3>
-              <p>Escolha um ministério ao lado para gerenciar suas escalas e voluntários.</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Create Ministry Modal */}
-      {showMinistryModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800">Novo Ministério</h3>
-              <button onClick={() => setShowMinistryModal(false)}><span className="text-2xl text-gray-400">&times;</span></button>
-            </div>
-            <form onSubmit={handleCreateMinistry} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nome do Ministério</label>
-                <input type="text" required className="w-full px-3 py-2 border rounded-lg" value={newMinistry.name} onChange={e => setNewMinistry({...newMinistry, name: e.target.value})} placeholder="Ex: Louvor, Infantil, Recepção" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Líder Responsável</label>
-                <input type="text" required className="w-full px-3 py-2 border rounded-lg" value={newMinistry.leaderName} onChange={e => setNewMinistry({...newMinistry, leaderName: e.target.value})} placeholder="Nome do líder" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cor de Identificação</label>
-                <div className="flex gap-3">
-                  {['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'].map(color => (
-                    <div 
-                      key={color} 
-                      onClick={() => setNewMinistry({...newMinistry, color})}
-                      className={`w-8 h-8 rounded-full cursor-pointer ring-2 ring-offset-2 ${newMinistry.color === color ? 'ring-gray-400' : 'ring-transparent'}`}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-              </div>
-              <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Criar Ministério</button>
-            </form>
-          </div>
+             <div className="flex gap-3 justify-end pt-2">
+               <button type="button" onClick={resetForm} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancelar</button>
+               <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center shadow-md">
+                 <Save size={18} className="mr-2" /> Salvar
+               </button>
+             </div>
+           </form>
         </div>
       )}
 
-      {/* Create Scale Modal */}
-      {showScaleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800">Nova Escala - {activeMinistry?.name}</h3>
-              <button onClick={() => setShowScaleModal(false)}><span className="text-2xl text-gray-400">&times;</span></button>
+      {/* Lista de Ministérios */}
+      {isLoading ? (
+        <div className="text-center py-10 text-gray-500">Carregando ministérios...</div>
+      ) : ministries.length === 0 ? (
+        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+          <Users size={48} className="mx-auto text-gray-300 mb-3" />
+          <p className="text-gray-500">Nenhum ministério cadastrado.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {ministries.map(ministry => (
+            <div key={ministry.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-purple-300 transition-all group">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-bold text-lg text-gray-800">{ministry.name}</h3>
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs">
+                  {ministry.name.charAt(0)}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-500 flex items-center mb-1">
+                  <User size={14} className="mr-1" />
+                  <span className="font-medium text-gray-700">{ministry.leaderName || 'Sem líder definido'}</span>
+                </p>
+                <p className="text-gray-600 text-sm line-clamp-2 min-h-[40px]">{ministry.description || 'Sem descrição.'}</p>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t pt-4 mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={() => startEdit(ministry)} 
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  title="Editar"
+                >
+                  <Edit2 size={18} />
+                </button>
+                <button 
+                  onClick={() => handleDelete(ministry.id)} 
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  title="Excluir"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
-            <form onSubmit={handleCreateScale} className="flex-1 flex flex-col overflow-hidden">
-              <div className="p-6 space-y-4 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                        <input type="date" required className="w-full px-3 py-2 border rounded-lg" value={newScale.date} onChange={e => setNewScale({...newScale, date: e.target.value})} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                        <input type="text" required className="w-full px-3 py-2 border rounded-lg" value={newScale.title} onChange={e => setNewScale({...newScale, title: e.target.value})} placeholder="Ex: Culto Domingo" />
-                    </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Selecionar Voluntários</label>
-                  <div className="border border-gray-200 rounded-lg max-h-60 overflow-y-auto divide-y divide-gray-100">
-                    {members.map(member => (
-                      <div 
-                        key={member.id} 
-                        onClick={() => toggleVolunteer(member.id)}
-                        className={`p-3 flex items-center justify-between cursor-pointer hover:bg-gray-50 ${newScale.volunteers?.includes(member.id) ? 'bg-blue-50' : ''}`}
-                      >
-                         <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gray-200 text-gray-600 flex items-center justify-center mr-3 text-xs font-bold">
-                                {member.name.charAt(0)}
-                            </div>
-                            <span className="text-sm font-medium text-gray-800">{member.name}</span>
-                         </div>
-                         {newScale.volunteers?.includes(member.id) && <UserPlus size={18} className="text-blue-600" />}
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2 text-right">{newScale.volunteers?.length} selecionados</p>
-                </div>
-              </div>
-              <div className="p-4 border-t border-gray-100 bg-gray-50">
-                  <button type="submit" className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">Salvar Escala</button>
-              </div>
-            </form>
-          </div>
+          ))}
         </div>
       )}
     </div>

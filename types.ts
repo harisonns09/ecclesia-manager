@@ -18,13 +18,12 @@ export enum MemberStatus {
 export interface Member {
   id: string;
   churchId: string;
-  name: string;
+  nome: string;
   email: string;
-  phone: string;
-  role: string;
+  telefone: string;
+  ministerio: string;
   status: MemberStatus;
-  joinDate: string;
-  birthDate?: string; 
+  dataNascimento?: string; 
   cpf?: string;       
 }
 

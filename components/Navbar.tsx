@@ -1,20 +1,41 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Calendar, LogIn, ArrowLeft } from 'lucide-react';
-import { Church } from '../types';
+import { Menu, X, Home, Calendar, LogIn, ArrowLeft, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // Importante
 
 interface NavbarProps {
+  isAuthenticated: boolean;
+  onLoginClick: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  currentChurch: Church | null;
-  onExitChurch: () => void;
+  onLogout: () => void;
+  churchName: string;
+  onChangeChurch: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch, onExitChurch }) => {
+const Navbar: React.FC<NavbarProps> = ({ 
+  isAuthenticated, 
+  onLoginClick, 
+  activeTab, 
+  // setActiveTab, // Não vamos mais usar isso para navegação
+  onLogout, 
+  churchName, 
+  onChangeChurch 
+}) => {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate(); // Hook de navegação
+
+  const handleNavigation = (id: string) => {
+    if (id === 'home') {
+      navigate('/');
+    } else if (id === 'events-public') {
+      navigate('/eventos');
+    }
+    setIsOpen(false);
+  };
 
   const navItems = [
     { id: 'home', label: 'Início', icon: <Home size={18} /> },
-    { id: 'events', label: 'Eventos', icon: <Calendar size={18} /> },
+    { id: 'events-public', label: 'Eventos', icon: <Calendar size={18} /> },
   ];
 
   return (
@@ -22,27 +43,28 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch,
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
+            {/* Botão de Trocar Igreja */}
             <button 
-              onClick={onExitChurch}
+              onClick={onChangeChurch}
               className="mr-3 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               title="Trocar Igreja"
             >
               <ArrowLeft size={20} />
             </button>
+
+            {/* Logo / Nome da Igreja */}
             <div 
               className="flex-shrink-0 flex items-center gap-2 cursor-pointer"
-              onClick={() => setActiveTab('home')}
+              onClick={() => navigate('/')}
             >
-              <div 
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-lg"
-              >
-                {currentChurch?.name.charAt(0) || 'E'}
+              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+                {churchName.charAt(0) || 'E'}
               </div>
               <span className="text-xl font-bold text-gray-800 hidden md:block">
-                {currentChurch?.name || 'Ecclesia'}
+                {churchName}
               </span>
               <span className="text-lg font-bold text-gray-800 md:hidden block truncate max-w-[150px]">
-                {currentChurch?.name || 'Ecclesia'}
+                {churchName}
               </span>
             </div>
           </div>
@@ -52,7 +74,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch,
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => handleNavigation(item.id)}
                 className={`flex items-center px-3 py-2 text-sm font-medium transition-colors ${
                   activeTab === item.id 
                     ? 'text-blue-600' 
@@ -63,13 +85,24 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch,
                 {item.label}
               </button>
             ))}
-            <button
-              onClick={() => setActiveTab('login')}
-              className="ml-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center shadow-sm"
-            >
-              <LogIn size={18} className="mr-2" />
-              Área Administrativa
-            </button>
+
+            {isAuthenticated ? (
+              <button
+                onClick={onLogout}
+                className="ml-4 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center"
+              >
+                <LogOut size={18} className="mr-2" />
+                Sair
+              </button>
+            ) : (
+              <button
+                onClick={onLoginClick}
+                className="ml-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+              >
+                <LogIn size={18} className="mr-2" />
+                Área Administrativa
+              </button>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -91,10 +124,7 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch,
             {navItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setIsOpen(false);
-                }}
+                onClick={() => handleNavigation(item.id)}
                 className={`flex items-center w-full px-3 py-4 rounded-md text-base font-medium ${
                   activeTab === item.id
                     ? 'bg-blue-50 text-blue-600'
@@ -105,16 +135,32 @@ const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, currentChurch,
                 {item.label}
               </button>
             ))}
-            <button
-              onClick={() => {
-                setActiveTab('login');
-                setIsOpen(false);
-              }}
-              className="w-full flex items-center px-3 py-4 mt-2 text-base font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
-            >
-              <LogIn size={18} className="mr-3" />
-              Área Administrativa
-            </button>
+            
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    onLogout();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center px-3 py-4 text-base font-medium text-red-600 hover:bg-red-50 rounded-md"
+                >
+                  <LogOut size={18} className="mr-3" />
+                  Sair
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    onLoginClick();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center px-3 py-4 text-base font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                >
+                  <LogIn size={18} className="mr-3" />
+                  Área Administrativa
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

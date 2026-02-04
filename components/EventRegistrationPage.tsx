@@ -1,23 +1,58 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, MapPin, User, Mail, Phone, ArrowLeft, CheckCircle, CreditCard, QrCode } from 'lucide-react';
-import { Event, EventRegistration } from '../types';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom'; // Hooks de Rota
+import { Calendar, Clock, MapPin, User, Mail, Phone, ArrowLeft, CheckCircle, CreditCard, QrCode, Loader, AlertCircle } from 'lucide-react';
+import { eventApi } from '../services/api';
+import { Event } from '../types';
 
-interface EventRegistrationPageProps {
-  event: Event;
-  onBack: () => void;
-  onRegister: (registration: EventRegistration) => void;
-}
+const EventRegistrationPage: React.FC = () => {
+  // 1. Pega o ID da URL (/evento/:id/inscricao)
+  const { id } = useParams<{ id: string }>(); 
+  const navigate = useNavigate();
 
-const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, onBack, onRegister }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [event, setEvent] = useState<Event | null>(null);
+  const [error, setError] = useState('');
+  
   const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
   const [formData, setFormData] = useState({
-    name: '',
+    nome: '',
     email: '',
-    phone: '',
+    telefone: '',
     lgpdConsent: false
   });
 
-  const isPaidEvent = (event.preco || 0) > 0;
+  // Carrega o evento ao iniciar
+  useEffect(() => {
+    if (id) {
+      loadEvent(id);
+    } else {
+      setError("Evento não identificado.");
+      setIsLoading(false);
+    }
+  }, [id]);
+
+  const loadEvent = async (eventId: string) => {
+    try {
+      setIsLoading(true);
+      // Busca o evento. 
+      // Nota: Assume que getById aceita "public" ou lida com a busca sem churchId se for endpoint público
+      // Se der erro aqui, certifique-se que seu backend libera o GET /api/evento/{id} sem autenticação
+      const data = await eventApi.getById("public", eventId); 
+      setEvent(data);
+    } catch (err) {
+      console.error("Erro ao carregar evento:", err);
+      setError("Evento não encontrado ou indisponível.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Função para voltar
+  const handleBack = () => {
+    navigate('/'); // Volta para a Home Pública ou onde preferir
+  };
+
+  const isPaidEvent = event && (event.preco || 0) > 0;
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,32 +65,62 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
     }
   };
 
-  const completeRegistration = () => {
-    onRegister({
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone,
-      registrationDate: new Date().toISOString()
-    });
-    setStep('success');
+  const completeRegistration = async () => {
+    if (!event || !id) return;
+    
+    try {
+      setIsLoading(true);
+      await eventApi.register("public", id, {
+        nome: formData.nome,
+        email: formData.email,
+        telefone: formData.telefone
+      });
+      setStep('success');
+    } catch (err) {
+      console.error("Erro na inscrição", err);
+      alert("Erro ao realizar inscrição. Tente novamente.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader className="animate-spin text-blue-600" size={40} />
+      </div>
+    );
+  }
+
+  if (error || !event) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <AlertCircle className="text-red-500 mb-4" size={48} />
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Ops! Algo deu errado.</h2>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button onClick={handleBack} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          Voltar para Início
+        </button>
+      </div>
+    );
+  }
 
   if (step === 'success') {
     return (
-      <div className="max-w-2xl mx-auto py-12 px-4 animate-in zoom-in-95 duration-300">
+      <div className="max-w-2xl mx-auto py-12 px-4 animate-in zoom-in-95 duration-300 font-sans">
         <div className="bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-100">
           <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={40} />
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Inscrição Confirmada!</h2>
           <p className="text-gray-600 mb-8 text-lg">
-            Parabéns, <strong>{formData.name}</strong>. Sua presença no evento <strong>{event.nomeEvento}</strong> está garantida.
+            Parabéns, <strong>{formData.nome}</strong>. Sua presença no evento <strong>{event.nomeEvento}</strong> está garantida.
             <br />
             Enviamos os detalhes para o email: {formData.email}.
           </p>
           <div className="flex justify-center gap-4">
             <button 
-              onClick={onBack}
+              onClick={handleBack}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-bold transition-colors"
             >
               Voltar ao Início
@@ -68,7 +133,7 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
 
   if (step === 'payment') {
     return (
-      <div className="max-w-3xl mx-auto py-8 px-4 animate-in slide-in-from-right duration-300">
+      <div className="max-w-3xl mx-auto py-8 px-4 animate-in slide-in-from-right duration-300 font-sans">
         <button onClick={() => setStep('form')} className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors">
           <ArrowLeft size={20} className="mr-2" />
           Voltar para dados
@@ -112,7 +177,7 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
                   <ol className="list-decimal list-inside text-sm text-blue-800 space-y-2">
                     <li>Realize o pagamento do valor exato.</li>
                     <li>Envie o comprovante para o WhatsApp da secretaria.</li>
-                    <li>Sua inscrição será confirmada automaticamente após compensação.</li>
+                    <li>Sua inscrição será confirmada após compensação.</li>
                   </ol>
                 </div>
                 <button 
@@ -131,10 +196,10 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
 
   // FORM STEP
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in duration-300">
-      <button onClick={onBack} className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors">
+    <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in duration-300 font-sans">
+      <button onClick={handleBack} className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors">
         <ArrowLeft size={20} className="mr-2" />
-        Voltar para eventos
+        Voltar
       </button>
 
       <div className="grid md:grid-cols-3 gap-8">
@@ -184,8 +249,8 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
                   required
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                   placeholder="Seu nome"
-                  value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  value={formData.nome}
+                  onChange={e => setFormData({...formData, nome: e.target.value})}
                 />
               </div>
 
@@ -215,8 +280,8 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
                     required
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
                     placeholder="(00) 00000-0000"
-                    value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})}
+                    value={formData.telefone}
+                    onChange={e => setFormData({...formData, telefone: e.target.value})}
                   />
                 </div>
               </div>
@@ -233,7 +298,7 @@ const EventRegistrationPage: React.FC<EventRegistrationPageProps> = ({ event, on
                   <div className="text-sm text-gray-700">
                     <span className="font-bold">Termo de Consentimento (LGPD)</span>
                     <p className="mt-1 text-gray-600">
-                      Autorizo o uso dos meus dados pessoais para fins de comunicação referente a este evento e atividades da igreja, conforme a Lei Geral de Proteção de Dados.
+                      Autorizo o uso dos meus dados pessoais para fins de comunicação referente a este evento e atividades da igreja.
                     </p>
                   </div>
                 </label>

@@ -19,8 +19,8 @@ export default api;
 
 // ===== AUTHENTICATION ENDPOINTS =====
 export const authApi = {
-  login: async (email: string, password: string) => {
-    const response = await api.post('/api/auth/login', { email, password });
+  login: async (login: string, password: string) => {
+    const response = await api.post('/api/auth/login', { login, password });
     return response.data;
   },
   logout: async () => {
@@ -36,7 +36,7 @@ export const churchApi = {
     return response.data;
   },
   getById: async (id: string) => {
-    const response = await api.get<Church>(`/api/igreja/${id}`);
+    const response = await api.get<Church>(`/api/igrejas/${id}`);
     return response.data;
   },
   create: async (church: Omit<Church, 'id'>) => {
@@ -44,11 +44,11 @@ export const churchApi = {
     return response.data;
   },
   update: async (id: string, church: Partial<Church>) => {
-    const response = await api.put<Church>(`/api/igreja/${id}`, church);
+    const response = await api.put<Church>(`/api/igrejas/${id}`, church);
     return response.data;
   },
   delete: async (id: string) => {
-    await api.delete(`/api/igreja/${id}`);
+    await api.delete(`/api/igrejas/${id}`);
   },
 };
 
@@ -67,11 +67,11 @@ export const memberApi = {
     return response.data;
   },
   update: async (churchId: string, memberId: string, member: Partial<Member>) => {
-    const response = await api.put<Member>(`/api/igrejas/${churchId}/membro/${memberId}`, member);
+    const response = await api.put<Member>(`/api/igrejas/${churchId}/membros/${memberId}`, member);
     return response.data;
   },
   delete: async (churchId: string, memberId: string) => {
-    await api.delete(`/api/igrejas/${churchId}/membro/${memberId}`);
+    await api.delete(`/api/igrejas/${churchId}/membros/${memberId}`);
   },
 };
 
@@ -101,11 +101,11 @@ export const transactionApi = {
 // ===== EVENT ENDPOINTS =====
 export const eventApi = {
   getByChurch: async (churchId: string) => {
-    const response = await api.get<Event[]>(`/api/igreja/${churchId}/eventos`);
+    const response = await api.get<Event[]>(`/api/igrejas/${churchId}/eventos`);
     return response.data;
   },
   getById: async (churchId: string, eventId: string) => {
-    const response = await api.get<Event>(`/api/igreja/${churchId}/evento/${eventId}`);
+    const response = await api.get<Event>(`/api/eventos/${eventId}`);
     return response.data;
   },
   create: async (churchId: string, event: Partial<Event>) => {
@@ -113,19 +113,19 @@ export const eventApi = {
         ...event,
         igrejaId: Number(churchId)
     };
-    const response = await api.post<Event>(`/api/igreja/${churchId}/eventos`, payload);
+    const response = await api.post<Event>(`/api/igrejas/${churchId}/eventos`, payload);
     return response.data;
   },
   update: async (churchId: string, eventId: string, event: Partial<Event>) => {
-    const response = await api.put<Event>(`/api/igreja/${churchId}/evento/${eventId}`, event);
+    const response = await api.put<Event>(`/api/igrejas/${churchId}/eventos/${eventId}`, event);
     return response.data;
   },
   delete: async (churchId: string, eventId: string) => {
-    await api.delete(`/api/igreja/${churchId}/evento/${eventId}`);
+    await api.delete(`/api/igrejas/${churchId}/eventos/${eventId}`);
   },
   
-  register: async (churchId: string, eventId: string, data: { name: string, email: string, phone: string }) => {
-     const response = await api.post(`/api/igreja/${churchId}/evento/${eventId}/inscricao`, data);
+  register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string }) => {
+     const response = await api.post(`/api/igrejas/${churchId}/eventos/${eventId}/inscricao`, data);
      return response.data;
   }
 };
@@ -179,23 +179,25 @@ export const scaleApi = {
 // ===== SMALL GROUP ENDPOINTS =====
 export const smallGroupApi = {
   getByChurch: async (churchId: string) => {
-    const response = await api.get<SmallGroup[]>(`/api/igrejas/${churchId}/small-groups`);
+    const response = await api.get<SmallGroup[]>(`/api/igrejas/${churchId}/celulas`);
     return response.data;
   },
   getById: async (churchId: string, groupId: string) => {
-    const response = await api.get<SmallGroup>(`/api/igrejas/${churchId}/small-groups/${groupId}`);
+    const response = await api.get<SmallGroup>(`/api/igrejas/${churchId}/celula/${groupId}`);
     return response.data;
   },
-  create: async (churchId: string, group: Omit<SmallGroup, 'id'>) => {
-    const response = await api.post<SmallGroup>(`/api/igrejas/${churchId}/small-groups`, group);
+  create: async (churchId: string, group: Partial<SmallGroup>) => {
+    const payload = { ...group, igrejaId: Number(churchId) };
+    const response = await api.post<SmallGroup>(`/api/igrejas/${churchId}/celulas`, payload);
     return response.data;
   },
   update: async (churchId: string, groupId: string, group: Partial<SmallGroup>) => {
-    const response = await api.put<SmallGroup>(`/api/igrejas/${churchId}/small-groups/${groupId}`, group);
+    const payload = { ...group, igrejaId: Number(churchId) };
+    const response = await api.put<SmallGroup>(`/api/igrejas/${churchId}/celula/${groupId}`, payload);
     return response.data;
   },
   delete: async (churchId: string, groupId: string) => {
-    await api.delete(`/api/igrejas/${churchId}/small-groups/${groupId}`);
+    await api.delete(`/api/igrejas/${churchId}/celula/${groupId}`);
   },
 };
 
