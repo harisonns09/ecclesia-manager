@@ -1,24 +1,25 @@
 import React from 'react';
-import { Calendar, Heart, MapPin, Clock } from 'lucide-react';
-import { Event } from '../types';
+import { Calendar, Heart, MapPin, Clock, Instagram } from 'lucide-react';
+import { Event, Church } from '../types'; // Importe Church
 
 interface PublicHomeProps {
   events: Event[];
+  church: Church; // Nova prop obrigatória
   onNavigateToEvents: () => void;
   onNavigateToRegistration: (event: Event) => void;
 }
 
-const PublicHome: React.FC<PublicHomeProps> = ({ events, onNavigateToEvents, onNavigateToRegistration }) => {
+const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEvents, onNavigateToRegistration }) => {
   const nextEvent = events.length > 0 ? events[0] : null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
-      {/* Hero Section */}
+      {/* Hero Section Dinâmico */}
       <div className="bg-gradient-to-r from-blue-700 to-indigo-800 rounded-2xl p-8 md:p-12 text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 max-w-2xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Bem-vindo à Ecclesia</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Bem-vindo à {church.name}</h1>
           <p className="text-lg md:text-xl text-blue-100 mb-8 leading-relaxed">
-            Uma comunidade de fé, esperança e amor. Conecte-se conosco, participe de nossos eventos e faça parte desta família.
+            Uma comunidade de fé em {church.city}. Conecte-se conosco, participe de nossos eventos e faça parte desta família.
           </p>
           <div className="flex flex-wrap gap-4">
             <button 
@@ -27,9 +28,19 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, onNavigateToEvents, onN
             >
               Ver Programação
             </button>
-            <button className="bg-blue-600 bg-opacity-50 text-white border border-blue-400 px-6 py-3 rounded-lg font-bold hover:bg-blue-600 transition-colors">
-              Fale Conosco
-            </button>
+            
+            {/* Botão do Instagram (Só aparece se a igreja tiver instagram) */}
+            {church.instagram && (
+              <a 
+                href={`https://instagram.com/${church.instagram.replace('@', '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 bg-pink-600 bg-opacity-90 text-white px-6 py-3 rounded-lg font-bold hover:bg-pink-700 transition-colors"
+              >
+                <Instagram size={20} />
+                Seguir no Instagram
+              </a>
+            )}
           </div>
         </div>
         {/* Background Decorative Circles */}
@@ -38,17 +49,19 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, onNavigateToEvents, onN
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card de Endereço Dinâmico */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4">
             <MapPin size={24} />
           </div>
           <h3 className="text-xl font-bold text-gray-800 mb-2">Onde Estamos</h3>
           <p className="text-gray-600">
-            Rua das Oliveiras, 123<br />
-            Centro, São Paulo - SP
+            {church.address}<br />
+            {church.city} - {church.state}
           </p>
         </div>
 
+        {/* Card de Cultos (Ainda estático pois o Backend não tem tabela de horários de cultos) */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4">
             <Clock size={24} />
@@ -57,7 +70,6 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, onNavigateToEvents, onN
           <ul className="text-gray-600 space-y-1">
             <li>Domingo: 10h e 19h</li>
             <li>Quarta-feira: 20h</li>
-            <li>Sábado: 19h30 (Jovens)</li>
           </ul>
         </div>
 

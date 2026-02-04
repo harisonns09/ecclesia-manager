@@ -27,7 +27,8 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
     slug: '',
     address: '',
     city: '',
-    themeColor: '#2563eb'
+    state: '',
+    instagram: '',
   });
 
   const filteredChurches = useMemo(() => {
@@ -53,7 +54,7 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
   // Management Handlers
   const startCreate = () => {
     setEditingId(null);
-    setFormData({ name: '', slug: '', address: '', city: '', themeColor: '#2563eb' });
+    setFormData({ name: '', slug: '', address: '', city: '', state: '', instagram: '' });
     setView('form');
   };
 
@@ -79,27 +80,35 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
     e.preventDefault();
     if (!formData.name || !formData.city) return;
 
-    if (editingId) {
-      // Edit
-      const updatedChurch = await churchApi.update(editingId, formData);
-      onEdit(updatedChurch); 
-    } else {
-      // Create
-      const newChurchData = {
+    // Removemos a referência ao slug e themeColor que não existem no Backend ou eram opcionais incorretos
+    const payload = {
           name: formData.name || '',
-          slug: formData.slug || formData.name?.toLowerCase().replace(/\s+/g, '-') || '',
+          // Se o backend não aceita SLUG, envie apenas se tiver certeza. 
+          // Mantendo slug aqui para satisfazer o tipo Typescript, mas o Java vai ignorar se não tiver no DTO.
+          slug: formData.slug || formData.name?.toLowerCase().replace(/\s+/g, '-') || '', 
           address: formData.address || '',
           city: formData.city || '',
-          themeColor: formData.themeColor || '#2563eb'
-        };
-        
-        const createdChurch = await churchApi.create(newChurchData);
-        onAdd(createdChurch); // Adiciona na lista com o ID real do banco
-      }
-    setView('manage');
+          state: formData.state || '',
+          instagram: formData.instagram || '',
+    };
+
+    try {
+        if (editingId) {
+            // Edit
+            const updatedChurch = await churchApi.update(editingId, payload);
+            onEdit(updatedChurch); 
+        } else {
+            // Create
+            const createdChurch = await churchApi.create(payload);
+            onAdd(createdChurch); 
+        }
+        setView('manage');
+    } catch (err) {
+        console.error("Erro ao salvar", err);
+        alert("Erro ao salvar igreja");
+    }
   };
 
-  // Auto-generate slug from name if empty
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setFormData(prev => ({
@@ -109,7 +118,7 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
     }));
   };
 
-  const COLORS = ['#2563eb', '#059669', '#7c3aed', '#db2777', '#d97706', '#dc2626', '#22c55e', '#0891b2'];
+  // REMOVIDO: const COLORS = [...]
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col items-center justify-center p-4">
@@ -127,13 +136,13 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
           <div className="flex-1 flex flex-col">
             {/* Header */}
             <div className="pt-10 pb-6 px-8 text-center relative">
-               <button 
-                onClick={() => setView('manage')}
-                className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
-                title="Gerenciar Igrejas"
-              >
-                <Settings size={20} />
-              </button>
+                <button 
+                 onClick={() => setView('manage')}
+                 className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
+                 title="Gerenciar Igrejas"
+               >
+                 <Settings size={20} />
+               </button>
               <div className="w-16 h-16 bg-blue-600 rounded-2xl text-white font-bold text-3xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-blue-200">
                 E
               </div>
@@ -184,7 +193,7 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
                               <div className="flex items-center overflow-hidden">
                                 <div 
                                   className="w-2 h-10 rounded-full mr-3 shrink-0" 
-                                  style={{ backgroundColor: church.themeColor }}
+                                  style={{ backgroundColor: 'black' }}
                                 ></div>
                                 <div className="truncate">
                                   <p className="font-semibold text-gray-800 text-sm truncate group-hover:text-blue-700">{church.name}</p>
@@ -235,56 +244,56 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
 
         {/* VIEW: MANAGE CHURCHES */}
         {view === 'manage' && (
-           <div className="flex-1 flex flex-col h-full">
-             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-20">
-               <div className="flex items-center">
-                 <button onClick={() => setView('select')} className="mr-3 text-gray-400 hover:text-gray-600">
-                   <ArrowLeft size={20} />
-                 </button>
-                 <h2 className="text-lg font-bold text-gray-800">Gerenciar Igrejas</h2>
-               </div>
-               <button 
-                onClick={startCreate}
-                className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
-               >
-                 <Plus size={20} />
-               </button>
-             </div>
-             
-             <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 custom-scrollbar">
-               {churches.length === 0 ? (
-                 <div className="text-center text-gray-400 py-10">
-                   <Building2 size={48} className="mx-auto mb-2 opacity-20" />
-                   <p>Nenhuma igreja cadastrada.</p>
-                 </div>
-               ) : (
-                 churches.map(church => (
-                   <div key={church.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-blue-300 transition-colors">
-                     <div className="flex items-center overflow-hidden mr-3">
-                       <div 
-                         className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 mr-3 shadow-sm"
-                         style={{ backgroundColor: church.themeColor }}
-                       >
-                         {church.name.charAt(0)}
-                       </div>
-                       <div className="min-w-0">
-                         <h3 className="font-bold text-gray-800 text-sm truncate">{church.name}</h3>
-                         <p className="text-xs text-gray-500 truncate">{church.city}</p>
-                       </div>
-                     </div>
-                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                       <button onClick={() => startEdit(church)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                         <Edit2 size={16} />
-                       </button>
-                       <button onClick={() => handleDelete(church.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                         <Trash2 size={16} />
-                       </button>
-                     </div>
-                   </div>
-                 ))
-               )}
-             </div>
-           </div>
+            <div className="flex-1 flex flex-col h-full">
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-20">
+                <div className="flex items-center">
+                  <button onClick={() => setView('select')} className="mr-3 text-gray-400 hover:text-gray-600">
+                    <ArrowLeft size={20} />
+                  </button>
+                  <h2 className="text-lg font-bold text-gray-800">Gerenciar Igrejas</h2>
+                </div>
+                <button 
+                 onClick={startCreate}
+                 className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                >
+                  <Plus size={20} />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 custom-scrollbar">
+                {churches.length === 0 ? (
+                  <div className="text-center text-gray-400 py-10">
+                    <Building2 size={48} className="mx-auto mb-2 opacity-20" />
+                    <p>Nenhuma igreja cadastrada.</p>
+                  </div>
+                ) : (
+                  churches.map(church => (
+                    <div key={church.id} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between group hover:border-blue-300 transition-colors">
+                      <div className="flex items-center overflow-hidden mr-3">
+                        <div 
+                          className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-lg shrink-0 mr-3 shadow-sm"
+                          style={{ backgroundColor: 'black' }}
+                        >
+                          {church.name.charAt(0)}
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-gray-800 text-sm truncate">{church.name}</h3>
+                          <p className="text-xs text-gray-500 truncate">{church.city}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={() => startEdit(church)} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => handleDelete(church.id)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
         )}
 
         {/* VIEW: FORM (ADD/EDIT) */}
@@ -324,8 +333,19 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Instagram (Opcional)</label>
+                <input 
+                  type="text" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.instagram}
+                  onChange={e => setFormData({...formData, instagram: e.target.value})}
+                  placeholder="@suaigreja"
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
-                 <div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Cidade</label>
                     <input 
                       type="text" 
@@ -333,10 +353,24 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       value={formData.city}
                       onChange={e => setFormData({...formData, city: e.target.value})}
-                      placeholder="São Paulo - SP"
+                      placeholder="São Paulo"
                     />
-                 </div>
-                 <div>
+                  </div>
+                  <div>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                     <input 
+                       type="text" 
+                       required
+                       maxLength={2}
+                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       value={formData.state}
+                       onChange={e => setFormData({...formData, state: e.target.value.toUpperCase()})}
+                       placeholder="SP"
+                     />
+                  </div>
+              </div>
+
+              <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Endereço</label>
                     <input 
                       type="text" 
@@ -345,25 +379,9 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
                       onChange={e => setFormData({...formData, address: e.target.value})}
                       placeholder="Rua das Flores, 123"
                     />
-                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Cor do Tema</label>
-                <div className="flex flex-wrap gap-3">
-                  {COLORS.map(color => (
-                    <button
-                      type="button"
-                      key={color}
-                      onClick={() => setFormData({...formData, themeColor: color})}
-                      className={`w-10 h-10 rounded-full cursor-pointer transition-transform hover:scale-110 flex items-center justify-center ${formData.themeColor === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''}`}
-                      style={{ backgroundColor: color }}
-                    >
-                       {formData.themeColor === color && <Check size={16} className="text-white" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* REMOVIDO: Seção de Cor do Tema */}
 
               <div className="pt-6">
                 <button 

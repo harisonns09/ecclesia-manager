@@ -55,23 +55,23 @@ export const churchApi = {
 // ===== MEMBER ENDPOINTS =====
 export const memberApi = {
   getByChurch: async (churchId: string) => {
-    const response = await api.get<Member[]>(`/api/churches/${churchId}/members`);
+    const response = await api.get<Member[]>(`/api/churches/${churchId}/membros`);
     return response.data;
   },
   getById: async (churchId: string, memberId: string) => {
-    const response = await api.get<Member>(`/api/churches/${churchId}/members/${memberId}`);
+    const response = await api.get<Member>(`/api/churches/${churchId}/membro/${memberId}`);
     return response.data;
   },
   create: async (churchId: string, member: Omit<Member, 'id'>) => {
-    const response = await api.post<Member>(`/api/churches/${churchId}/members`, member);
+    const response = await api.post<Member>(`/api/churches/${churchId}/membros`, member);
     return response.data;
   },
   update: async (churchId: string, memberId: string, member: Partial<Member>) => {
-    const response = await api.put<Member>(`/api/churches/${churchId}/members/${memberId}`, member);
+    const response = await api.put<Member>(`/api/churches/${churchId}/membro/${memberId}`, member);
     return response.data;
   },
   delete: async (churchId: string, memberId: string) => {
-    await api.delete(`/api/churches/${churchId}/members/${memberId}`);
+    await api.delete(`/api/churches/${churchId}/membro/${memberId}`);
   },
 };
 
@@ -101,46 +101,55 @@ export const transactionApi = {
 // ===== EVENT ENDPOINTS =====
 export const eventApi = {
   getByChurch: async (churchId: string) => {
-    const response = await api.get<Event[]>(`/api/churches/${churchId}/events`);
+    const response = await api.get<Event[]>(`/api/igreja/${churchId}/eventos`);
     return response.data;
   },
   getById: async (churchId: string, eventId: string) => {
-    const response = await api.get<Event>(`/api/churches/${churchId}/events/${eventId}`);
+    const response = await api.get<Event>(`/api/igreja/${churchId}/evento/${eventId}`);
     return response.data;
   },
-  create: async (churchId: string, event: Omit<Event, 'id'>) => {
-    const response = await api.post<Event>(`/api/churches/${churchId}/events`, event);
+  create: async (churchId: string, event: Partial<Event>) => {
+    const payload = {
+        ...event,
+        igrejaId: Number(churchId)
+    };
+    const response = await api.post<Event>(`/api/igreja/${churchId}/eventos`, payload);
     return response.data;
   },
   update: async (churchId: string, eventId: string, event: Partial<Event>) => {
-    const response = await api.put<Event>(`/api/churches/${churchId}/events/${eventId}`, event);
+    const response = await api.put<Event>(`/api/igreja/${churchId}/evento/${eventId}`, event);
     return response.data;
   },
   delete: async (churchId: string, eventId: string) => {
-    await api.delete(`/api/churches/${churchId}/events/${eventId}`);
+    await api.delete(`/api/igreja/${churchId}/evento/${eventId}`);
   },
+  
+  register: async (churchId: string, eventId: string, data: { name: string, email: string, phone: string }) => {
+     const response = await api.post(`/api/igreja/${churchId}/evento/${eventId}/inscricao`, data);
+     return response.data;
+  }
 };
 
 // ===== MINISTRY ENDPOINTS =====
 export const ministryApi = {
   getByChurch: async (churchId: string) => {
-    const response = await api.get<Ministry[]>(`/api/churches/${churchId}/ministries`);
+    const response = await api.get<Ministry[]>(`/api/churches/${churchId}/ministerios`);
     return response.data;
   },
   getById: async (churchId: string, ministryId: string) => {
-    const response = await api.get<Ministry>(`/api/churches/${churchId}/ministries/${ministryId}`);
+    const response = await api.get<Ministry>(`/api/churches/${churchId}/ministerio/${ministryId}`);
     return response.data;
   },
   create: async (churchId: string, ministry: Omit<Ministry, 'id'>) => {
-    const response = await api.post<Ministry>(`/api/churches/${churchId}/ministries`, ministry);
+    const response = await api.post<Ministry>(`/api/churches/${churchId}/ministerios`, ministry);
     return response.data;
   },
   update: async (churchId: string, ministryId: string, ministry: Partial<Ministry>) => {
-    const response = await api.put<Ministry>(`/api/churches/${churchId}/ministries/${ministryId}`, ministry);
+    const response = await api.put<Ministry>(`/api/churches/${churchId}/ministerio/${ministryId}`, ministry);
     return response.data;
   },
   delete: async (churchId: string, ministryId: string) => {
-    await api.delete(`/api/churches/${churchId}/ministries/${ministryId}`);
+    await api.delete(`/api/churches/${churchId}/ministerio/${ministryId}`);
   },
 };
 

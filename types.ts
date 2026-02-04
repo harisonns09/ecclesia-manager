@@ -1,10 +1,12 @@
 export interface Church {
   id: string;
   name: string;
-  slug: string;
+  instagram?: string; 
   address: string;
   city: string;
-  themeColor: string; // Hex code for branding
+  state: string;      
+   slug: string;    
+  // themeColor: string; // Remova se o Java não mandar
 }
 
 export enum MemberStatus {

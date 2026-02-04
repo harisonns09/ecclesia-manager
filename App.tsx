@@ -274,12 +274,13 @@ const App: React.FC = () => {
       <main className="flex-1">
         <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 animate-in fade-in duration-300">
           {activeTab === 'home' && (
-            <PublicHome 
-              events={events} 
-              onNavigateToEvents={() => { setActiveTab('events'); window.scrollTo(0,0); }}
-              onNavigateToRegistration={handleNavigateToRegistration}
-            />
-          )}
+  <PublicHome 
+    events={events} 
+    church={currentChurch} // <--- ADICIONE ESTA LINHA
+    onNavigateToEvents={() => { setActiveTab('events'); window.scrollTo(0,0); }}
+    onNavigateToRegistration={handleNavigateToRegistration}
+  />
+)}
           
           {activeTab === 'events' && (
             <Events 
