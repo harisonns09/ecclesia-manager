@@ -1,319 +1,312 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; // Hooks de Rota
-import { Calendar, Clock, MapPin, User, Mail, Phone, ArrowLeft, CheckCircle, CreditCard, QrCode, Loader, AlertCircle } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Calendar, Clock, MapPin, CheckCircle, CreditCard, Loader, ArrowLeft, ExternalLink, Wallet, AlertTriangle } from 'lucide-react';
 import { eventApi } from '../services/api';
 import { Event } from '../types';
 
 const EventRegistrationPage: React.FC = () => {
-  // 1. Pega o ID da URL (/evento/:id/inscricao)
   const { id } = useParams<{ id: string }>(); 
   const navigate = useNavigate();
 
+  // Estados de Controle
   const [isLoading, setIsLoading] = useState(true);
-  const [event, setEvent] = useState<Event | null>(null);
-  const [error, setError] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false); // Loader do InfinitePay
   
-  const [step, setStep] = useState<'form' | 'payment' | 'success'>('form');
+  // Dados
+  const [event, setEvent] = useState<Event | null>(null);
+  const [registrationId, setRegistrationId] = useState<string | null>(null); // ID da inscrição criada
+  const [error, setError] = useState('');
+
+  // Controle de Etapas: 'form' -> 'payment_selection' -> 'success'
+  const [step, setStep] = useState<'form' | 'payment_selection' | 'success'>('form');
+  const [finalPaymentMethod, setFinalPaymentMethod] = useState<'ONLINE' | 'CASH'>('ONLINE');
+
+  // Parâmetros de retorno da InfinitePay (pagamento concluído)
+  const urlParams = new URLSearchParams(window.location.search);
+  const paymentStatus = urlParams.get('status');
+  const transactionId = urlParams.get('transactionId');
+
   const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    lgpdConsent: false
+    nome: '', email: '', telefone: '', cpf: '', lgpdConsent: false
   });
 
-  // Carrega o evento ao iniciar
   useEffect(() => {
-    if (id) {
-      loadEvent(id);
-    } else {
-      setError("Evento não identificado.");
-      setIsLoading(false);
+    if (id) loadEvent(id);
+    else { setError("Evento não identificado."); setIsLoading(false); }
+
+    // Se voltar da InfinitePay com sucesso
+    if (paymentStatus === 'success') {
+       setFinalPaymentMethod('ONLINE');
+       setStep('success');
     }
-  }, [id]);
+  }, [id, paymentStatus]);
 
   const loadEvent = async (eventId: string) => {
     try {
       setIsLoading(true);
-      // Busca o evento. 
-      // Nota: Assume que getById aceita "public" ou lida com a busca sem churchId se for endpoint público
-      // Se der erro aqui, certifique-se que seu backend libera o GET /api/evento/{id} sem autenticação
       const data = await eventApi.getById("public", eventId); 
       setEvent(data);
     } catch (err) {
-      console.error("Erro ao carregar evento:", err);
-      setError("Evento não encontrado ou indisponível.");
+      console.error(err);
+      setError("Evento indisponível.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Função para voltar
-  const handleBack = () => {
-    navigate('/'); // Volta para a Home Pública ou onde preferir
   };
 
   const isPaidEvent = event && (event.preco || 0) > 0;
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.lgpdConsent) return;
-    
-    if (isPaidEvent) {
-      setStep('payment');
-    } else {
-      completeRegistration();
+    if (!event || !id) return;
+
+    setIsProcessing(true);
+
+    try {
+      // O Backend deve retornar o ID da inscrição criada
+      // Ex: { id: "105", status: "PENDENTE" }
+      const response = await eventApi.register("public", id, {
+        ...formData,
+      });
+
+      // Salva o ID da inscrição para usar no pagamento
+      setRegistrationId(response.numeroInscricao); 
+
+      if (isPaidEvent) {
+        setStep('payment_selection'); // Vai para escolha de pagamento
+      } else {
+        setStep('success'); // Se for grátis, acabou
+      }
+
+    } catch (err) {
+      console.error("Erro na inscrição:", err);
+      alert("Erro ao salvar seus dados. Tente novamente.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const completeRegistration = async () => {
-    if (!event || !id) return;
+  // --- 2. PAGAMENTO ONLINE (Redireciona) ---
+  const handleOnlinePayment = async () => {
+    if (!event || !id || !registrationId) return;
+    setIsRedirecting(true);
     
     try {
-      setIsLoading(true);
-      await eventApi.register("public", id, {
-        nome: formData.nome,
-        email: formData.email,
-        telefone: formData.telefone
+      // Chama endpoint de checkout passando o ID da inscrição JÁ CRIADA
+      const response = await eventApi.createPaymentCheckout("public", id, {
+         ...formData,
+         amount: 1 || 0,
+         numeroInscricao: registrationId // Importante: Vincula ao cadastro existente
       });
-      setStep('success');
+      
+      if (response.checkoutUrl) {
+        window.location.href = response.checkoutUrl;
+      } else {
+        alert("Erro ao gerar link.");
+        setIsRedirecting(false);
+      }
     } catch (err) {
-      console.error("Erro na inscrição", err);
-      alert("Erro ao realizar inscrição. Tente novamente.");
-    } finally {
-      setIsLoading(false);
+      console.error(err);
+      alert("Erro de conexão com pagamento.");
+      setIsRedirecting(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loader className="animate-spin text-blue-600" size={40} />
-      </div>
-    );
-  }
+  // --- 3. PAGAMENTO EM DINHEIRO (Apenas finaliza) ---
+  const handleCashPayment = async () => {
+    setFinalPaymentMethod('CASH');
+    // Opcional: Avisar o backend que o usuário escolheu dinheiro
+    // await eventApi.updatePaymentMethod(registrationId, 'CASH');
+    setStep('success');
+  };
 
-  if (error || !event) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-        <AlertCircle className="text-red-500 mb-4" size={48} />
-        <h2 className="text-xl font-bold text-gray-800 mb-2">Ops! Algo deu errado.</h2>
-        <p className="text-gray-600 mb-6">{error}</p>
-        <button onClick={handleBack} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          Voltar para Início
-        </button>
-      </div>
-    );
-  }
+  // --- RENDERS ---
 
-  if (step === 'success') {
-    return (
-      <div className="max-w-2xl mx-auto py-12 px-4 animate-in zoom-in-95 duration-300 font-sans">
-        <div className="bg-white rounded-2xl shadow-xl p-8 text-center border border-gray-100">
-          <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={40} />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Inscrição Confirmada!</h2>
-          <p className="text-gray-600 mb-8 text-lg">
-            Parabéns, <strong>{formData.nome}</strong>. Sua presença no evento <strong>{event.nomeEvento}</strong> está garantida.
-            <br />
-            Enviamos os detalhes para o email: {formData.email}.
-          </p>
-          <div className="flex justify-center gap-4">
-            <button 
-              onClick={handleBack}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 font-bold transition-colors"
-            >
-              Voltar ao Início
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader className="animate-spin text-blue-600" size={40} /></div>;
+  if (isRedirecting) return <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50"><Loader className="animate-spin text-blue-600 mb-4" size={40} /><h2 className="font-bold">Indo para InfinitePay...</h2></div>;
+  if (error || !event) return <div className="p-8 text-center"><h2 className="text-xl font-bold">Erro</h2><p>{error}</p></div>;
 
-  if (step === 'payment') {
-    return (
-      <div className="max-w-3xl mx-auto py-8 px-4 animate-in slide-in-from-right duration-300 font-sans">
-        <button onClick={() => setStep('form')} className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors">
-          <ArrowLeft size={20} className="mr-2" />
-          Voltar para dados
-        </button>
 
+  // ======================================================
+  // TELA 2: ESCOLHA DE PAGAMENTO (Onde a mágica acontece)
+  // ======================================================
+  if (step === 'payment_selection') {
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4 animate-in slide-in-from-right">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
-          <div className="bg-emerald-600 p-6 text-white text-center">
-            <h2 className="text-2xl font-bold flex items-center justify-center gap-2">
-              <CreditCard size={28} />
-              Pagamento do Evento
-            </h2>
-            <p className="opacity-90 mt-2">Finalize sua inscrição realizando o pagamento</p>
-          </div>
-
-          <div className="p-8">
-            <div className="bg-gray-50 rounded-xl p-6 mb-8 border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumo do Pedido</h3>
-              <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                <span className="text-gray-600">{event.nomeEvento} (Inscrição)</span>
-                <span className="font-medium text-gray-900">R$ {event.preco?.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between items-center py-4 text-xl font-bold text-emerald-600">
-                <span>Total</span>
-                <span>R$ {event.preco?.toFixed(2)}</span>
-              </div>
+            <div className="bg-blue-600 p-6 text-white text-center">
+                <CheckCircle size={48} className="mx-auto mb-2 opacity-90" />
+                <h2 className="text-2xl font-bold">Pré-Inscrição Realizada!</h2>
+                <p className="opacity-90">Seus dados foram salvos. Escolha como deseja pagar.</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="text-center p-6 border-2 border-dashed border-gray-300 rounded-xl">
-                <QrCode size={64} className="mx-auto text-gray-400 mb-4" />
-                <h4 className="font-bold text-gray-800 mb-2">Pagamento via PIX</h4>
-                <p className="text-sm text-gray-500 mb-4">Escaneie o QR Code ou copie a chave abaixo</p>
-                <div className="bg-gray-100 p-3 rounded text-xs font-mono break-all text-gray-600 select-all cursor-pointer hover:bg-gray-200 transition-colors">
-                  00020126580014br.gov.bcb.pix0136123e4567-e89b-12d3-a456-426614174000
+            <div className="p-8">
+                <div className="bg-gray-50 rounded-xl p-4 mb-8 flex justify-between items-center border border-gray-200">
+                    <span className="text-gray-600 font-medium">Valor Total</span>
+                    <span className="text-2xl font-bold text-gray-900">R$ {event.preco?.toFixed(2)}</span>
                 </div>
-              </div>
 
-              <div className="flex flex-col justify-center space-y-4">
-                <div className="p-4 rounded-lg bg-blue-50 border border-blue-100">
-                  <h4 className="font-semibold text-blue-900 mb-1">Instruções:</h4>
-                  <ol className="list-decimal list-inside text-sm text-blue-800 space-y-2">
-                    <li>Realize o pagamento do valor exato.</li>
-                    <li>Envie o comprovante para o WhatsApp da secretaria.</li>
-                    <li>Sua inscrição será confirmada após compensação.</li>
-                  </ol>
+                <div className="space-y-4">
+                    {/* OPÇÃO 1: ONLINE */}
+                    <button 
+                        onClick={handleOnlinePayment}
+                        className="w-full group relative flex items-center p-4 border-2 border-emerald-500 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all text-left"
+                    >
+                        <div className="bg-emerald-100 p-3 rounded-full mr-4 group-hover:bg-white transition-colors">
+                            <CreditCard className="text-emerald-600" size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-bold text-emerald-900 text-lg">Pagar Online Agora</h4>
+                            <p className="text-emerald-700 text-sm">Pix ou Cartão (Liberação Imediata)</p>
+                        </div>
+                        <ExternalLink size={20} className="text-emerald-600" />
+                    </button>
+
+                    <div className="flex items-center justify-center text-gray-400 text-sm py-2">
+                        <span>ou</span>
+                    </div>
+
+                    {/* OPÇÃO 2: DINHEIRO */}
+                    <button 
+                        onClick={handleCashPayment}
+                        className="w-full group flex items-center p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all text-left"
+                    >
+                        <div className="bg-gray-100 p-3 rounded-full mr-4 group-hover:bg-white transition-colors">
+                            <Wallet className="text-gray-600 group-hover:text-orange-600" size={24} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-bold text-gray-800 group-hover:text-orange-800 text-lg">Pagar no Local</h4>
+                            <p className="text-gray-500 group-hover:text-orange-700 text-sm">Dinheiro ou Máquina na entrada</p>
+                        </div>
+                    </button>
                 </div>
-                <button 
-                  onClick={completeRegistration}
-                  className="w-full py-4 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all"
-                >
-                  Já fiz o pagamento, Confirmar
-                </button>
-              </div>
+                
+                <div className="mt-8 pt-6 border-t border-gray-100 text-center">
+                    <p className="text-xs text-gray-400 flex items-center justify-center gap-2">
+                        <AlertTriangle size={12} />
+                        Sua vaga fica reservada temporariamente.
+                    </p>
+                </div>
             </div>
-          </div>
         </div>
       </div>
     );
   }
 
-  // FORM STEP
-  return (
-    <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in duration-300 font-sans">
-      <button onClick={handleBack} className="flex items-center text-gray-500 hover:text-gray-700 mb-6 transition-colors">
-        <ArrowLeft size={20} className="mr-2" />
-        Voltar
-      </button>
+  // ======================================================
+  // TELA 3: SUCESSO FINAL
+  // ======================================================
+  if (step === 'success') {
+    const isCash = isPaidEvent && finalPaymentMethod === 'CASH';
 
+    return (
+      <div className="max-w-2xl mx-auto py-12 px-4 animate-in zoom-in-95">
+        <div className={`bg-white rounded-2xl shadow-xl p-8 text-center border ${isCash ? 'border-orange-100' : 'border-green-100'}`}>
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${isCash ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+            {isCash ? <Wallet size={40} /> : <CheckCircle size={40} />}
+          </div>
+          
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            {isCash ? 'Confirmado!' : 'Pagamento Recebido!'}
+          </h2>
+          
+          <p className="text-gray-600 mb-6">
+            Olá <strong>{formData.nome}</strong>, sua inscrição para <strong>{event.nomeEvento}</strong> está registrada.
+          </p>
+
+          {isCash && (
+             <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 text-sm text-orange-800">
+                <strong>Atenção:</strong> Realize o pagamento de <b>R$ {event.preco?.toFixed(2)}</b> na entrada do evento para validar seu acesso.
+             </div>
+          )}
+
+          <div className="bg-gray-50 rounded-xl p-6 mb-8 text-left border border-gray-100">
+            <h4 className="text-sm font-bold text-gray-500 uppercase mb-4 tracking-wider">Detalhes</h4>
+            <p className="text-gray-600 flex items-center mb-1"><Calendar size={14} className="mr-2"/> {new Date(event.dataEvento).toLocaleDateString('pt-BR')}</p>
+            <p className="text-gray-600 flex items-center"><MapPin size={14} className="mr-2"/> {event.local}</p>
+            
+            {!isCash && transactionId && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-xs text-gray-400">ID Pagamento: <span className="font-mono text-gray-600">{transactionId}</span></p>
+                </div>
+            )}
+          </div>
+
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-900 transition-colors shadow-lg">
+            Voltar ao Início
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ======================================================
+  // TELA 1: FORMULÁRIO DE DADOS
+  // ======================================================
+  return (
+    <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in">
+        <button onClick={() => navigate('/')} className="flex items-center text-gray-500 mb-6"><ArrowLeft size={20} className="mr-2" /> Voltar</button>
+      
       <div className="grid md:grid-cols-3 gap-8">
-        {/* Event Info Sidebar */}
+        {/* Card Evento */}
         <div className="md:col-span-1">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-24">
             <h2 className="text-xl font-bold text-gray-900 mb-4">{event.nomeEvento}</h2>
             <div className="space-y-4 text-sm text-gray-600">
-              <div className="flex items-center">
-                <Calendar size={18} className="mr-3 text-blue-600" />
-                <span>{new Date(event.dataEvento).toLocaleDateString('pt-BR')}</span>
-              </div>
-              <div className="flex items-center">
-                <Clock size={18} className="mr-3 text-blue-600" />
-                <span>{event.horario}</span>
-              </div>
-              <div className="flex items-center">
-                <MapPin size={18} className="mr-3 text-blue-600" />
-                <span>{event.local}</span>
-              </div>
-              {isPaidEvent && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-gray-500 mb-1">Valor da Inscrição</p>
-                  <p className="text-2xl font-bold text-emerald-600">R$ {event.preco?.toFixed(2)}</p>
-                </div>
-              )}
+               <div className="flex items-center"><Calendar size={18} className="mr-3 text-blue-600" /> <span>{new Date(event.dataEvento).toLocaleDateString('pt-BR')}</span></div>
+               <div className="flex items-center"><Clock size={18} className="mr-3 text-blue-600" /> <span>{event.horario}</span></div>
+               <div className="flex items-center"><MapPin size={18} className="mr-3 text-blue-600" /> <span>{event.local}</span></div>
             </div>
+            {isPaidEvent && <p className="text-2xl font-bold text-emerald-600 mt-4 border-t pt-4">R$ {event.preco?.toFixed(2)}</p>}
           </div>
         </div>
 
-        {/* Registration Form */}
-        <div className="md:col-span-2">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="px-8 py-6 border-b border-gray-100 bg-gray-50">
-              <h3 className="text-xl font-bold text-gray-800">Ficha de Inscrição</h3>
-              <p className="text-gray-500 text-sm mt-1">Preencha seus dados corretamente</p>
-            </div>
-            
-            <form onSubmit={handleFormSubmit} className="p-8 space-y-6">
+        {/* Formulário */}
+        <div className="md:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+           <form onSubmit={handleFormSubmit} className="p-8 space-y-6">
+              <div className="border-b pb-4 mb-4">
+                  <h3 className="text-xl font-bold text-gray-800">Dados da Inscrição</h3>
+                  <p className="text-sm text-gray-500">Preencha seus dados para reservar sua vaga.</p>
+              </div>
+              
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 flex items-center">
-                  <User size={16} className="mr-2 text-gray-400" />
-                  Nome Completo
-                </label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                  placeholder="Seu nome"
-                  value={formData.nome}
-                  onChange={e => setFormData({...formData, nome: e.target.value})}
-                />
+                <label className="text-sm font-medium text-gray-700">Nome Completo</label>
+                <input required className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} />
               </div>
 
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Mail size={16} className="mr-2 text-gray-400" />
-                    Email
-                  </label>
-                  <input 
-                    type="email" 
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="seu@email.com"
-                    value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})}
-                  />
+                   <label className="text-sm font-medium text-gray-700">Email</label>
+                   <input type="email" required className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                 </div>
-
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700 flex items-center">
-                    <Phone size={16} className="mr-2 text-gray-400" />
-                    Telefone / WhatsApp
-                  </label>
-                  <input 
-                    type="tel" 
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                    placeholder="(00) 00000-0000"
-                    value={formData.telefone}
-                    onChange={e => setFormData({...formData, telefone: e.target.value})}
-                  />
+                   <label className="text-sm font-medium text-gray-700">Telefone</label>
+                   <input type="tel" required className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} />
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                <label className="flex items-start cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    required
-                    className="mt-1 mr-3 h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    checked={formData.lgpdConsent}
-                    onChange={e => setFormData({...formData, lgpdConsent: e.target.checked})}
-                  />
-                  <div className="text-sm text-gray-700">
-                    <span className="font-bold">Termo de Consentimento (LGPD)</span>
-                    <p className="mt-1 text-gray-600">
-                      Autorizo o uso dos meus dados pessoais para fins de comunicação referente a este evento e atividades da igreja.
-                    </p>
-                  </div>
-                </label>
-              </div>
+              {isPaidEvent && (
+                <div className="space-y-2">
+                   <label className="text-sm font-medium text-gray-700">CPF (Para Nota Fiscal)</label>
+                   <input required className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="000.000.000-00" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} />
+                </div>
+              )}
 
-              <div className="pt-4">
-                <button 
+              <label className="flex items-start gap-3 p-4 bg-blue-50 rounded-xl cursor-pointer">
+                 <input type="checkbox" required checked={formData.lgpdConsent} onChange={e => setFormData({...formData, lgpdConsent: e.target.checked})} className="mt-1" />
+                 <span className="text-sm text-gray-700">Concordo com os termos e desejo realizar minha inscrição.</span>
+              </label>
+
+              <button 
                   type="submit" 
-                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold text-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all flex items-center justify-center"
-                >
-                  {isPaidEvent ? 'Continuar para Pagamento' : 'Confirmar Inscrição Gratuita'}
-                </button>
-              </div>
-            </form>
-          </div>
+                  disabled={isProcessing}
+                  className="w-full py-4 bg-blue-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-blue-700 transition-all disabled:opacity-70"
+              >
+                 {isProcessing ? <Loader className="animate-spin" size={20} /> : 'Finalizar Inscrição'}
+              </button>
+           </form>
         </div>
       </div>
     </div>

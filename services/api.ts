@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church } from '../types';
+import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse } from '../types';
 
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
@@ -128,7 +128,14 @@ export const eventApi = {
   register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string }) => {
      const response = await api.post(`/api/igrejas/${churchId}/eventos/${eventId}/inscricao`, data);
      return response.data;
-  }
+  },
+
+  // Solicita ao Backend que crie um link de checkout na InfinitePay
+  createPaymentCheckout: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string, amount: number, numeroInscricao: string }) => {
+    // POST para o seu backend Java
+    const response = await api.post<CheckoutResponse>(`/api/igrejas/${churchId}/eventos/${eventId}/checkout`, data);
+    return response.data;
+  },
 };
 
 // ===== MINISTRY ENDPOINTS =====

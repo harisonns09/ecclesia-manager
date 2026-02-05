@@ -69,6 +69,7 @@ export interface Event {
   local: string;
   preco?: number;
   inscricoes?: EventRegistration[]; 
+  ministerioResponsavel: string;
 }
 
 export interface ChatMessage {
@@ -119,4 +120,9 @@ export interface PrayerRequest {
   category: 'Saúde' | 'Família' | 'Financeiro' | 'Espiritual' | 'Outros';
   prayedCount: number;
   isAnonymous: boolean;
+}
+
+export interface CheckoutResponse {
+  checkoutUrl: string;
+  transactionId: string;
 }

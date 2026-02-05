@@ -1,51 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Plus, Trash2, UserPlus, Loader, AlertCircle, Edit2, X } from 'lucide-react';
-import { Event } from '../types'; // Certifique-se que types.ts tenha os campos opcionais ou use any/interface local se necessário
+import { Calendar, Clock, MapPin, Plus, Trash2, UserPlus, Loader, AlertCircle, Edit2, X, Users } from 'lucide-react';
+import { Event } from '../types'; 
 import { eventApi } from '../services/api';
 
-// Interface local para bater com o DTO do Java (Português)
-// Isso garante que o JSON enviado seja lido corretamente pelo Spring Boot
+// 1. ADICIONADO: Campo ministerioResponsavel
 interface EventoBackend {
   id?: string;
   nomeEvento: string;
-  dataEvento: string; // YYYY-MM-DD
+  dataEvento: string;
   horario: string;
   descricao: string;
   local: string;
   preco: number;
+  ministerioResponsavel: string; // Novo campo obrigatório
   inscricoes?: any[];
 }
 
 interface EventsProps {
-  events: Event[]; // Mantendo compatibilidade com a prop herdada, mas gerenciaremos o estado interno
-  setEvents: React.Dispatch<React.SetStateAction<Event[]>>; // Dummy se usarmos estado interno
+  events: Event[]; 
+  setEvents: React.Dispatch<React.SetStateAction<Event[]>>; 
   isAdmin: boolean;
   churchId: string;
   onRegisterClick?: (event: Event) => void;
 }
 
 const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) => {
-  // Estado local para eventos (já que o Dashboard carrega apenas resumo, aqui carregamos tudo)
   const [localEvents, setLocalEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Estado de Edição
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Estado do Formulário (Campos em Português para o Java)
+  // 2. ADICIONADO: Valor padrão para evitar Null
   const initialFormState: EventoBackend = {
     nomeEvento: '',
     dataEvento: new Date().toISOString().split('T')[0],
     horario: '19:00',
     descricao: '',
     local: 'Templo Principal',
-    preco: 0
+    preco: 0,
+    ministerioResponsavel: 'Geral' // Default seguro
   };
 
   const [formData, setFormData] = useState<EventoBackend>(initialFormState);
 
-  // --- 1. Carregar Eventos ao Iniciar ---
   useEffect(() => {
     if (churchId) {
       loadEvents();
@@ -56,20 +53,17 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
     setIsLoading(true);
     try {
       const data = await eventApi.getByChurch(churchId);
-      // Ordenar por data
       const sorted = data.sort((a: any, b: any) => 
         new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime()
       );
       setLocalEvents(sorted);
     } catch (err) {
       console.error("Erro ao carregar eventos:", err);
-      // Não bloqueamos a tela, apenas logamos
     } finally {
       setIsLoading(false);
     }
   };
 
-  // --- 2. Helpers de Formulário ---
   const resetForm = () => {
     setFormData(initialFormState);
     setEditingId(null);
@@ -78,23 +72,23 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
 
   const handleEditClick = (event: any) => {
     setError('');
-    // Garante ID como string
     const eventId = String(event.id);
     setEditingId(eventId);
 
     setFormData({
       nomeEvento: event.nomeEvento,
-      dataEvento: event.dataEvento ? event.dataEvento.split('T')[0] : '', // Trata data
+      dataEvento: event.dataEvento ? event.dataEvento.split('T')[0] : '',
       horario: event.horario,
       descricao: event.descricao || '',
       local: event.local,
-      preco: Number(event.preco) || 0
+      preco: Number(event.preco) || 0,
+      // Se o evento antigo não tiver ministério, usa 'Geral'
+      ministerioResponsavel: event.ministerioResponsavel || 'Geral' 
     });
     
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // --- 3. Enviar Dados (Create / Update) ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -104,31 +98,29 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
       return;
     }
 
+    // Validação extra
+    if (!formData.ministerioResponsavel.trim()) {
+       setError("O campo Ministério Responsável é obrigatório.");
+       return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Payload pronto para o Java
       const payload = {
         ...formData,
-        preco: Number(formData.preco), // Garante Double no Java
-        // A API (api.ts) já injeta o igrejaId: Number(churchId)
+        preco: Number(formData.preco),
       };
 
       if (editingId) {
-        // UPDATE
         const updatedEvent = await eventApi.update(churchId, editingId, payload as any);
-        
         setLocalEvents(prev => prev.map(ev => String(ev.id) === editingId ? updatedEvent : ev)
           .sort((a: any, b: any) => new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime()));
-        
         alert("Evento atualizado!");
       } else {
-        // CREATE
         const createdEvent = await eventApi.create(churchId, payload as any);
-        
         setLocalEvents(prev => [...prev, createdEvent]
           .sort((a: any, b: any) => new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime()));
-        
         alert("Evento criado!");
       }
 
@@ -143,15 +135,12 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
     }
   };
 
-  // --- 4. Deletar Evento ---
   const handleDeleteEvent = async (id: string) => {
     if (!churchId) return;
-
     if (confirm('Tem certeza que deseja excluir?')) {
       try {
         setIsLoading(true);
         await eventApi.delete(churchId, id);
-        
         if (editingId === id) resetForm();
         setLocalEvents(prev => prev.filter(e => String(e.id) !== id));
       } catch (err) {
@@ -165,7 +154,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
   return (
     <div className={`grid grid-cols-1 ${isAdmin ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 animate-in fade-in duration-500`}>
       
-      {/* Formulário (Apenas Admin) */}
       {isAdmin && (
         <div className="lg:col-span-1">
           <div className={`p-6 rounded-xl border shadow-sm sticky top-6 transition-colors ${editingId ? 'bg-blue-50 border-blue-200' : 'bg-white border-gray-200'}`}>
@@ -199,6 +187,21 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                   onChange={e => setFormData({...formData, nomeEvento: e.target.value})}
                 />
               </div>
+              
+              {/* 3. ADICIONADO: Input de Ministério */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ministério Responsável</label>
+                <div className="relative">
+                  <input
+                    type="text" required placeholder="Ex: Geral, Jovens, Infantil"
+                    className="w-full pl-9 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                    value={formData.ministerioResponsavel}
+                    onChange={e => setFormData({...formData, ministerioResponsavel: e.target.value})}
+                  />
+                  <Users size={16} className="absolute left-3 top-2.5 text-gray-400" />
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
@@ -287,6 +290,14 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                     <Calendar size={12} className="mr-1" />
                     {new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                   </div>
+                  
+                  {/* Badge do Ministério */}
+                  {event.ministerioResponsavel && (
+                     <div className="bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-semibold mr-3 border border-blue-100">
+                        {event.ministerioResponsavel}
+                     </div>
+                  )}
+
                   <h3 className="text-lg font-bold text-gray-900 mr-4">{event.nomeEvento}</h3>
                   
                   {event.preco > 0 ? (
