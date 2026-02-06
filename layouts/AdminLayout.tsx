@@ -21,22 +21,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Proteção de Rota: Se não tiver igreja ou não estiver logado, joga para fora
+  // Proteção de Rota
   if (!currentChurch) return <Navigate to="/" replace />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden">
+      {/* Sidebar controla o menu lateral */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 
         onLogout={onLogout}
         currentUser={currentUser}
         onExitChurch={onExitChurch}
-        activeTab={window.location.pathname} // Highlight baseado na URL
+        activeTab={window.location.pathname}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden w-full">
+        {/* Navbar precisa saber como abrir o Sidebar */}
         <Navbar 
           isAuthenticated={isAuthenticated} 
           onLoginClick={() => {}} 
@@ -45,11 +47,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
           onLogout={onLogout}
           churchName={currentChurch.name}
           onChangeChurch={onExitChurch} 
+          onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
         />
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto">
-            {/* O Outlet é onde as "páginas" filhas serão renderizadas */}
             <Outlet />
           </div>
         </main>

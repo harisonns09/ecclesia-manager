@@ -14,6 +14,8 @@ import Navbar from './components/Navbar';
 import Login from './components/Login';
 import EventRegistrationPage from './components/EventRegistrationPage';
 import CookieConsent from './components/CookieConsent';
+import EventFormPage from './components/EventFormPage';
+import EventAttendeesPage from './components/EventAttendeesPage';
 
 import { Church } from './types';
 import { churchApi } from './services/api';
@@ -169,7 +171,9 @@ function App() {
           <Route path="ministries" element={<Ministries churchId={currentChurch?.id || ''} />} />
           <Route path="small-groups" element={<SmallGroups churchId={currentChurch?.id || ''} />} />
           <Route path="events" element={<Events isAdmin={true} churchId={currentChurch?.id || ''} events={[]} setEvents={() => {}} />} />
-          
+          <Route path="events/new" element={<EventFormPage churchId={currentChurch?.id || ''} />} />        
+          <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
+          <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
           <Route index element={<Navigate to="dashboard" />} />
         </Route>
 
