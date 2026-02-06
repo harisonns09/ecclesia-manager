@@ -3,8 +3,8 @@ import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest,
 
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
-  // baseURL: 'http://localhost:8080', 
-  baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
+  baseURL: 'http://localhost:8080', 
+  //baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
 });
 
 // Interceptador para adicionar o Token automaticamente em toda requisição
@@ -125,7 +125,7 @@ export const eventApi = {
     await api.delete(`/api/igrejas/${churchId}/eventos/${eventId}`);
   },
   
-  register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string }) => {
+  register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
      const response = await api.post(`/api/igrejas/${churchId}/eventos/${eventId}/inscricao`, data);
      return response.data;
   },

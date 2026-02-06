@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, MapPin, CheckCircle, CreditCard, Loader, ArrowLeft, ExternalLink, Wallet, AlertTriangle } from 'lucide-react';
 import { eventApi } from '../services/api';
 import { Event } from '../types';
+import ConfirmationModal from './ConfirmationModal'; 
 
 const EventRegistrationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>(); 
@@ -10,19 +11,22 @@ const EventRegistrationPage: React.FC = () => {
 
   // Estados de Controle
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false); // Loader do InfinitePay
+  const [isProcessing, setIsProcessing] = useState(false); 
+  
+  // Novos Estados para o Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'ONLINE' | 'CASH' | null>(null);
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false); 
   
   // Dados
   const [event, setEvent] = useState<Event | null>(null);
-  const [registrationId, setRegistrationId] = useState<string | null>(null); // ID da inscrição criada
+  const [registrationId, setRegistrationId] = useState<string | null>(null);
   const [error, setError] = useState('');
 
-  // Controle de Etapas: 'form' -> 'payment_selection' -> 'success'
+  // Controle de Etapas
   const [step, setStep] = useState<'form' | 'payment_selection' | 'success'>('form');
   const [finalPaymentMethod, setFinalPaymentMethod] = useState<'ONLINE' | 'CASH'>('ONLINE');
 
-  // Parâmetros de retorno da InfinitePay (pagamento concluído)
   const urlParams = new URLSearchParams(window.location.search);
   const paymentStatus = urlParams.get('status');
   const transactionId = urlParams.get('transactionId');
@@ -35,7 +39,6 @@ const EventRegistrationPage: React.FC = () => {
     if (id) loadEvent(id);
     else { setError("Evento não identificado."); setIsLoading(false); }
 
-    // Se voltar da InfinitePay com sucesso
     if (paymentStatus === 'success') {
        setFinalPaymentMethod('ONLINE');
        setStep('success');
@@ -65,21 +68,16 @@ const EventRegistrationPage: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // O Backend deve retornar o ID da inscrição criada
-      // Ex: { id: "105", status: "PENDENTE" }
-      const response = await eventApi.register("public", id, {
-        ...formData,
-      });
-
-      // Salva o ID da inscrição para usar no pagamento
-      setRegistrationId(response.numeroInscricao); 
+      const response = await eventApi.register("public", id, { ...formData });
+      
+      const regId = response.numeroInscricao;
+      setRegistrationId(regId); 
 
       if (isPaidEvent) {
-        setStep('payment_selection'); // Vai para escolha de pagamento
+        setStep('payment_selection');
       } else {
-        setStep('success'); // Se for grátis, acabou
+        setStep('success');
       }
-
     } catch (err) {
       console.error("Erro na inscrição:", err);
       alert("Erro ao salvar seus dados. Tente novamente.");
@@ -88,53 +86,84 @@ const EventRegistrationPage: React.FC = () => {
     }
   };
 
-  // --- 2. PAGAMENTO ONLINE (Redireciona) ---
-  const handleOnlinePayment = async () => {
-    if (!event || !id || !registrationId) return;
-    setIsRedirecting(true);
+  const openConfirmModal = (type: 'ONLINE' | 'CASH') => {
+    setModalType(type);
+    setModalOpen(true);
+  };
+
+  // --- AÇÃO CONFIRMADA ---
+  const handleConfirmAction = async () => {
+    if (!event || !id || !registrationId || !modalType) return;
     
+    setIsConfirmingPayment(true);
+
     try {
-      // Chama endpoint de checkout passando o ID da inscrição JÁ CRIADA
-      const response = await eventApi.createPaymentCheckout("public", id, {
-         ...formData,
-         amount: 1 || 0,
-         numeroInscricao: registrationId // Importante: Vincula ao cadastro existente
-      });
-      
-      if (response.checkoutUrl) {
-        window.location.href = response.checkoutUrl;
-      } else {
-        alert("Erro ao gerar link.");
-        setIsRedirecting(false);
-      }
+        if (modalType === 'ONLINE') {
+            const response = await eventApi.createPaymentCheckout("public", id, {
+                ...formData,
+                amount: event.preco || 0,
+                numeroInscricao: registrationId
+            });
+            
+            if (response.checkoutUrl) {
+                window.location.href = response.checkoutUrl;
+            } else {
+                alert("Erro ao gerar link de pagamento.");
+                setIsConfirmingPayment(false);
+                setModalOpen(false);
+            }
+        } else {
+            // --- FLUXO DINHEIRO ---
+            setFinalPaymentMethod('CASH');
+            
+            setTimeout(() => {
+                setModalOpen(false);
+                setStep('success');
+                setIsConfirmingPayment(false);
+            }, 800);
+        }
     } catch (err) {
-      console.error(err);
-      alert("Erro de conexão com pagamento.");
-      setIsRedirecting(false);
+        console.error(err);
+        alert("Ocorreu um erro ao processar sua solicitação.");
+        setIsConfirmingPayment(false);
+        setModalOpen(false);
     }
   };
 
-  // --- 3. PAGAMENTO EM DINHEIRO (Apenas finaliza) ---
-  const handleCashPayment = async () => {
-    setFinalPaymentMethod('CASH');
-    // Opcional: Avisar o backend que o usuário escolheu dinheiro
-    // await eventApi.updatePaymentMethod(registrationId, 'CASH');
-    setStep('success');
-  };
-
-  // --- RENDERS ---
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader className="animate-spin text-blue-600" size={40} /></div>;
-  if (isRedirecting) return <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50"><Loader className="animate-spin text-blue-600 mb-4" size={40} /><h2 className="font-bold">Indo para InfinitePay...</h2></div>;
   if (error || !event) return <div className="p-8 text-center"><h2 className="text-xl font-bold">Erro</h2><p>{error}</p></div>;
 
-
-  // ======================================================
-  // TELA 2: ESCOLHA DE PAGAMENTO (Onde a mágica acontece)
-  // ======================================================
+  // --- TELA 2: ESCOLHA DE PAGAMENTO ---
   if (step === 'payment_selection') {
     return (
-      <div className="max-w-2xl mx-auto py-12 px-4 animate-in slide-in-from-right">
+      <div className="max-w-2xl mx-auto py-12 px-4 animate-in slide-in-from-right relative">
+        
+        {/* MODAL INTEGRADO AQUI */}
+        <ConfirmationModal 
+            isOpen={modalOpen}
+            onClose={() => setModalOpen(false)}
+            onConfirm={handleConfirmAction}
+            isProcessing={isConfirmingPayment}
+            colorClass={modalType === 'ONLINE' ? 'emerald' : 'orange'}
+            title={modalType === 'ONLINE' ? 'Pagar com InfinitePay' : 'Pagar no Local'}
+            confirmText={modalType === 'ONLINE' ? 'Ir para Pagamento' : 'Confirmar Vaga'}
+            description={
+                modalType === 'ONLINE' ? (
+                    <>
+                        Você será redirecionado para o ambiente seguro da <strong>InfinitePay</strong>.<br/><br/>
+                        Valor a pagar: <strong className="text-emerald-600 text-xl">R$ {event.preco?.toFixed(2)}</strong><br/>
+                        Aceitamos Pix e Cartão de Crédito.
+                    </>
+                ) : (
+                    <>
+                        Ao confirmar, sua inscrição ficará como <strong>Pendente</strong>.<br/><br/>
+                        Você deverá realizar o pagamento de <strong className="text-orange-600 text-xl">R$ {event.preco?.toFixed(2)}</strong> na secretaria ou entrada do evento.
+                    </>
+                )
+            }
+        />
+
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
             <div className="bg-blue-600 p-6 text-white text-center">
                 <CheckCircle size={48} className="mx-auto mb-2 opacity-90" />
@@ -149,9 +178,9 @@ const EventRegistrationPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                    {/* OPÇÃO 1: ONLINE */}
+                    {/* BOTÃO 1: ONLINE (Abre Modal) */}
                     <button 
-                        onClick={handleOnlinePayment}
+                        onClick={() => openConfirmModal('ONLINE')}
                         className="w-full group relative flex items-center p-4 border-2 border-emerald-500 bg-emerald-50 rounded-xl hover:bg-emerald-100 transition-all text-left"
                     >
                         <div className="bg-emerald-100 p-3 rounded-full mr-4 group-hover:bg-white transition-colors">
@@ -168,9 +197,9 @@ const EventRegistrationPage: React.FC = () => {
                         <span>ou</span>
                     </div>
 
-                    {/* OPÇÃO 2: DINHEIRO */}
+                    {/* BOTÃO 2: DINHEIRO (Abre Modal) */}
                     <button 
-                        onClick={handleCashPayment}
+                        onClick={() => openConfirmModal('CASH')}
                         className="w-full group flex items-center p-4 border-2 border-gray-200 rounded-xl hover:border-orange-400 hover:bg-orange-50 transition-all text-left"
                     >
                         <div className="bg-gray-100 p-3 rounded-full mr-4 group-hover:bg-white transition-colors">
@@ -195,9 +224,7 @@ const EventRegistrationPage: React.FC = () => {
     );
   }
 
-  // ======================================================
-  // TELA 3: SUCESSO FINAL
-  // ======================================================
+  // --- TELA 3: SUCESSO FINAL ---
   if (step === 'success') {
     const isCash = isPaidEvent && finalPaymentMethod === 'CASH';
 
@@ -242,15 +269,12 @@ const EventRegistrationPage: React.FC = () => {
     );
   }
 
-  // ======================================================
-  // TELA 1: FORMULÁRIO DE DADOS
-  // ======================================================
+  // --- TELA 1: FORMULÁRIO (Igual ao anterior) ---
   return (
     <div className="max-w-4xl mx-auto py-8 px-4 animate-in fade-in">
         <button onClick={() => navigate('/')} className="flex items-center text-gray-500 mb-6"><ArrowLeft size={20} className="mr-2" /> Voltar</button>
       
       <div className="grid md:grid-cols-3 gap-8">
-        {/* Card Evento */}
         <div className="md:col-span-1">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sticky top-24">
             <h2 className="text-xl font-bold text-gray-900 mb-4">{event.nomeEvento}</h2>
@@ -263,7 +287,6 @@ const EventRegistrationPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Formulário */}
         <div className="md:col-span-2 bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
            <form onSubmit={handleFormSubmit} className="p-8 space-y-6">
               <div className="border-b pb-4 mb-4">
