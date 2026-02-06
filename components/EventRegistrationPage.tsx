@@ -282,6 +282,7 @@ const EventRegistrationPage: React.FC = () => {
                <div className="flex items-center"><Calendar size={18} className="mr-3 text-blue-600" /> <span>{new Date(event.dataEvento).toLocaleDateString('pt-BR')}</span></div>
                <div className="flex items-center"><Clock size={18} className="mr-3 text-blue-600" /> <span>{event.horario}</span></div>
                <div className="flex items-center"><MapPin size={18} className="mr-3 text-blue-600" /> <span>{event.local}</span></div>
+               <div className="flex items-center"><span>{event.descricao}</span></div>
             </div>
             {isPaidEvent && <p className="text-2xl font-bold text-emerald-600 mt-4 border-t pt-4">R$ {event.preco?.toFixed(2)}</p>}
           </div>
