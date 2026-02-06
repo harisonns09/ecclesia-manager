@@ -91,6 +91,7 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
           city: formData.city || '',
           state: formData.state || '',
           instagram: formData.instagram || '',
+          cnpj: formData.cnpj || '',
     };
 
     try {
