@@ -68,7 +68,7 @@ const EventRegistrationPage: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      const response = await eventApi.register("public", id, { ...formData });
+      const response = await eventApi.register( id, { ...formData });
       
       const regId = response.numeroInscricao;
       setRegistrationId(regId); 

@@ -125,15 +125,15 @@ export const eventApi = {
     await api.delete(`/api/igrejas/${churchId}/eventos/${eventId}`);
   },
   
-  register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
-     const response = await api.post(`/api/igrejas/${churchId}/eventos/${eventId}/inscricao`, data);
+  register: async (eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
+     const response = await api.post(`/api/eventos/${eventId}/inscricao`, data);
      return response.data;
   },
 
   // Solicita ao Backend que crie um link de checkout na InfinitePay
   createPaymentCheckout: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string, amount: number, numeroInscricao: string }) => {
     // POST para o seu backend Java
-    const response = await api.post<CheckoutResponse>(`/api/igrejas/${churchId}/eventos/${eventId}/checkout`, data);
+    const response = await api.post<CheckoutResponse>(`/api/eventos/${eventId}/checkout`, data);
     return response.data;
   },
 

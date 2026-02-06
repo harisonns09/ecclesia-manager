@@ -57,7 +57,7 @@ const RegistrationStatusPage: React.FC = () => {
     try {
         // Atualiza método para ONLINE
         try {
-            await eventApi.updatePaymentMethod("public", String(selectedRegistration.evento.id), selectedRegistration.numeroInscricao, 'ONLINE');
+            await eventApi.updatePaymentMethod('public', String(selectedRegistration.evento.id), selectedRegistration.numeroInscricao, 'ONLINE');
         } catch (e) { /* ignore */ }
 
         const response = await eventApi.createPaymentCheckout(
