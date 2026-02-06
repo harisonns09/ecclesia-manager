@@ -136,6 +136,13 @@ export const eventApi = {
     const response = await api.post<CheckoutResponse>(`/api/igrejas/${churchId}/eventos/${eventId}/checkout`, data);
     return response.data;
   },
+
+  updatePaymentMethod: async (churchId: string, eventId: string, registrationId: string, method: 'ONLINE' | 'DINHEIRO') => {
+    const response = await api.put(`/api/igrejas/${churchId}/eventos/${eventId}/inscricoes/${registrationId}/pagamento`, { 
+        formaPagamento: method 
+    });
+    return response.data;
+  },
 };
 
 // ===== MINISTRY ENDPOINTS =====
@@ -230,4 +237,11 @@ export const prayerRequestApi = {
   delete: async (churchId: string, requestId: string) => {
     await api.delete(`/api/igrejas/${churchId}/prayer-requests/${requestId}`);
   },
+};
+
+export const inscricaoApi = {
+  getRegistrationStatus: async (id: string) => {
+    const response = await api.get(`/api/inscricoes/${id}`);
+    return response.data;
+  }
 };

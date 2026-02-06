@@ -16,6 +16,7 @@ import EventRegistrationPage from './components/EventRegistrationPage';
 import CookieConsent from './components/CookieConsent';
 import EventFormPage from './components/EventFormPage';
 import EventAttendeesPage from './components/EventAttendeesPage';
+import RegistrationStatusPage from './components/RegistrationStatusPage';
 
 import { Church } from './types';
 import { churchApi } from './services/api';
@@ -155,6 +156,7 @@ function App() {
 
         
         <Route path="/evento/:id/inscricao" element={<EventRegistrationPage />} />
+        <Route path="/minha-inscricao/:id" element={<RegistrationStatusPage />} />
 
         
         <Route path="/admin" element={
@@ -174,6 +176,7 @@ function App() {
           <Route path="events/new" element={<EventFormPage churchId={currentChurch?.id || ''} />} />        
           <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
           <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
+          
           <Route index element={<Navigate to="dashboard" />} />
         </Route>
 

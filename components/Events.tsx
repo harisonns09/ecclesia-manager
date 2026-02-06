@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, UserPlus, Loader, Users } from 'lucide-react'; // Importe Users
+import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, UserPlus, Loader, Users, Search, X, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Event } from '../types'; 
 import { eventApi } from '../services/api';
@@ -16,6 +16,10 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
   const navigate = useNavigate();
   const [localEvents, setLocalEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Estados para o Modal de Busca de Inscrição
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchId, setSearchId] = useState('');
 
   useEffect(() => {
     if (churchId) {
@@ -53,24 +57,78 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
     }
   };
 
+  const handleSearchRegistration = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchId.trim()) {
+        // Redireciona para a página de status pública
+        navigate(`/minha-inscricao/${searchId.trim()}`);
+        setIsSearchModalOpen(false);
+        setSearchId('');
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500 relative">
       
+      {/* MODAL DE BUSCA (Apenas Público) */}
+      {isSearchModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold text-gray-800">Consultar Inscrição</h3>
+                    <button onClick={() => setIsSearchModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                        <X size={24} />
+                    </button>
+                </div>
+                <p className="text-gray-500 text-sm mb-4">
+                    Digite o seu cpf para verificar o status e acessar o pagamento.
+                </p>
+                <form onSubmit={handleSearchRegistration} className="flex gap-2">
+                    <input 
+                        type="text" 
+                        placeholder="Ex: 12345"
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={searchId}
+                        onChange={(e) => setSearchId(e.target.value)}
+                        autoFocus
+                    />
+                    <button type="submit" className="bg-blue-600 text-white px-6 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center">
+                        <ArrowRight size={20} />
+                    </button>
+                </form>
+            </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-gray-800">
           {isAdmin ? 'Gerenciamento de Eventos' : 'Próximos Eventos'}
         </h2>
         
-        {isAdmin && (
-          <button 
-            onClick={() => navigate('/admin/events/new')}
-            className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
-          >
-            <Plus size={20} className="mr-2" />
-            Novo Evento
-          </button>
-        )}
+        <div className="flex gap-3">
+            {/* Botão para Admin: Criar Evento */}
+            {isAdmin && (
+            <button 
+                onClick={() => navigate('/admin/events/new')}
+                className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
+            >
+                <Plus size={20} className="mr-2" />
+                Novo Evento
+            </button>
+            )}
+
+            {/* Botão para Público: Consultar Inscrição */}
+            {!isAdmin && (
+                <button 
+                    onClick={() => setIsSearchModalOpen(true)}
+                    className="flex items-center justify-center px-4 py-2.5 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 font-medium shadow-sm transition-all"
+                >
+                    <Search size={18} className="mr-2" />
+                    Minha Inscrição
+                </button>
+            )}
+        </div>
       </div>
 
       {/* Lista */}
@@ -94,9 +152,9 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                   </div>
                   
                   {event.ministerioResponsavel && (
-                     <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-semibold mr-3 border border-gray-200">
+                      <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-semibold mr-3 border border-gray-200">
                         {event.ministerioResponsavel}
-                     </div>
+                      </div>
                   )}
 
                   <h3 className="text-lg font-bold text-gray-900 mr-4">{event.nomeEvento}</h3>
@@ -125,7 +183,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
               <div className="mt-6 md:mt-0 md:ml-8 flex items-center flex-shrink-0 gap-2 border-t md:border-t-0 pt-4 md:pt-0 border-gray-100">
                 {isAdmin ? (
                   <>
-                    {/* BOTÃO NOVO: VER INSCRITOS */}
                     <button 
                         onClick={() => navigate(`/admin/events/${event.id}/attendees`)}
                         className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 flex items-center transition-colors"
@@ -158,7 +215,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
             </div>
           ))}
         </div>
-        )}
+        )}     
     </div>
   );
 };

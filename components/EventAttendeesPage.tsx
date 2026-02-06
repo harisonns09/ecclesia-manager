@@ -47,6 +47,7 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
     const cpf = att.cpf?.toLowerCase() || '';
     const telefone = att.telefone?.toLowerCase() || '';
     const status = att.status?.toLowerCase() || '';
+    const formaPagamento = att.tipoPagamento?.toLowerCase() || '';
     return nome.includes(search) || email.includes(search) || numeroInscricao.includes(search) || cpf.includes(search) || telefone.includes(search) || status.includes(search);
   });
 
@@ -116,6 +117,7 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                         <th className="p-4 font-semibold">Contato</th>
                         <th className="p-4 font-semibold">Data Inscrição</th>
                         <th className="p-4 font-semibold">Valor</th>
+                        <th className="p-4 font-semibold">Forma de Pagamento</th>
                         <th className="p-4 font-semibold text-center">Status</th>
                     </tr>
                 </thead>
@@ -136,6 +138,9 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                                 </td>
                                 <td className="p-4 text-sm font-medium text-gray-700">
                                     {event.preco > 0 ? `R$ ${event.preco.toFixed(2)}` : 'Grátis'}
+                                </td>
+                                <td className="p-4 text-sm font-medium text-gray-700">
+                                    {att.tipoPagamento || '-'}
                                 </td>
                                 <td className="p-4 flex justify-center">
                                     {renderStatus(att.status)}

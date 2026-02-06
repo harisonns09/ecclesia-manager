@@ -102,8 +102,11 @@ const EventRegistrationPage: React.FC = () => {
             const response = await eventApi.createPaymentCheckout("public", id, {
                 ...formData,
                 amount: event.preco || 0,
+                
                 numeroInscricao: registrationId
             });
+
+            await eventApi.updatePaymentMethod("public", id, registrationId, 'ONLINE');
             
             if (response.checkoutUrl) {
                 window.location.href = response.checkoutUrl;
@@ -114,6 +117,9 @@ const EventRegistrationPage: React.FC = () => {
             }
         } else {
             // --- FLUXO DINHEIRO ---
+
+            await eventApi.updatePaymentMethod("public", id, registrationId, 'DINHEIRO');
+
             setFinalPaymentMethod('CASH');
             
             setTimeout(() => {
@@ -153,7 +159,7 @@ const EventRegistrationPage: React.FC = () => {
                     <>
                         Você será redirecionado para o ambiente seguro da <strong>InfinitePay</strong>.<br/><br/>
                         Valor a pagar: <strong className="text-emerald-600 text-xl">R$ {event.preco?.toFixed(2)}</strong><br/>
-                        Aceitamos Pix e Cartão de Crédito.
+                        
                     </>
                 ) : (
                     <>
@@ -313,7 +319,7 @@ const EventRegistrationPage: React.FC = () => {
 
               {isPaidEvent && (
                 <div className="space-y-2">
-                   <label className="text-sm font-medium text-gray-700">CPF (Para Nota Fiscal)</label>
+                   <label className="text-sm font-medium text-gray-700">CPF</label>
                    <input required className="w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none" placeholder="000.000.000-00" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} />
                 </div>
               )}
