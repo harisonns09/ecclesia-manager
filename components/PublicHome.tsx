@@ -82,7 +82,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEve
             Faça parte desta obra.
           </p>
           <div className="text-sm font-mono bg-gray-50 p-2 rounded border border-gray-200 text-gray-500">
-            PIX: financeiro@ecclesia.com
+            {church.cnpj || 'PIX indisponível'}
           </div>
         </div>
       </div>
