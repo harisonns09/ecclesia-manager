@@ -79,8 +79,8 @@ const EventRegistrationPage: React.FC = () => {
         setStep('success');
       }
     } catch (err) {
-      console.error("Erro na inscrição:", err);
-      alert("Erro ao salvar seus dados. Tente novamente.");
+      const mensagemDoBackend = (err as any)?.response?.data?.message || "Erro desconhecido";
+      alert(mensagemDoBackend);
     } finally {
       setIsProcessing(false);
     }
