@@ -29,6 +29,7 @@ const ChurchSelector: React.FC<ChurchSelectorProps> = ({ churches, onSelect, onA
     city: '',
     state: '',
     instagram: '',
+    cnpj: '',
   });
 
   const filteredChurches = useMemo(() => {
