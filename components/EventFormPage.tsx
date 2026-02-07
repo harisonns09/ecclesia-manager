@@ -142,7 +142,7 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
             <div className="relative">
               <input
                 type="text" required placeholder="Ex: Geral, Jovens, Infantil"
-                className="input-field pl-10"
+                className="input-field !pl-10"
                 value={formData.ministerioResponsavel}
                 onChange={e => setFormData({...formData, ministerioResponsavel: e.target.value})}
               />
@@ -157,7 +157,7 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
               <div className="relative">
                   <input
                       type="date" required
-                      className="input-field pl-10"
+                      className="input-field !pl-10"
                       value={formData.dataEvento}
                       onChange={e => setFormData({...formData, dataEvento: e.target.value})}
                   />
@@ -169,7 +169,7 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
               <div className="relative">
                   <input
                       type="time" required
-                      className="input-field pl-10"
+                      className="input-field !pl-10"
                       value={formData.horario}
                       onChange={e => setFormData({...formData, horario: e.target.value})}
                   />
@@ -185,7 +185,7 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                   <div className="relative">
                       <input
                           type="text"
-                          className="input-field pl-10"
+                          className="input-field !pl-10"
                           value={formData.local}
                           onChange={e => setFormData({...formData, local: e.target.value})}
                       />
@@ -197,7 +197,7 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                   <div className="relative">
                     <input
                         type="number" min="0" step="0.01"
-                        className="input-field pl-10"
+                        className="input-field !pl-10"
                         value={formData.preco}
                         onChange={e => setFormData({...formData, preco: parseFloat(e.target.value)})}
                     />

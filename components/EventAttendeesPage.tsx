@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare } from 'lucide-react';
 import { eventApi } from '../services/api';
+import ConfirmationModal from './ConfirmationModal'; 
 
 const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
   const { id } = useParams<{ id: string }>();
@@ -11,7 +12,11 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
   const [attendees, setAttendees] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [processingId, setProcessingId] = useState<string | null>(null);
+  
+  // Estado do Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedAttendee, setSelectedAttendee] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (churchId && id) {
@@ -34,25 +39,31 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
     }
   };
 
-  const handleConfirmPayment = async (registrationId: string) => {
-    if (!confirm("Confirmar que o pagamento foi recebido manualmente?")) return;
+  const openConfirmModal = (attendee: any) => {
+    setSelectedAttendee(attendee);
+    setIsModalOpen(true);
+  };
 
-    setProcessingId(registrationId);
+  const handleConfirmPayment = async () => {
+    if (!selectedAttendee || !id) return;
+
+    setIsProcessing(true);
     try {
-        await eventApi.confirmPayment(churchId, id!, registrationId);
+        await eventApi.confirmPayment(id, selectedAttendee.numero_inscricao);
         
         setAttendees(prev => prev.map(att => 
-            att.numero_inscricao === registrationId 
+            att.numero_inscricao === selectedAttendee.numero_inscricao 
                 ? { ...att, status: 'PAGO' } 
                 : att
         ));
         
-        alert("Pagamento confirmado!");
+        setIsModalOpen(false);
+        setSelectedAttendee(null);
     } catch (err) {
         alert("Erro ao confirmar pagamento.");
         console.error(err);
     } finally {
-        setProcessingId(null);
+        setIsProcessing(false);
     }
   };
 
@@ -66,52 +77,74 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
   const renderStatus = (status: string) => {
     switch (status) {
       case 'PAGO':
-        return <span className="flex items-center text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md text-xs font-bold border border-emerald-100"><CheckCircle size={12} className="mr-1"/> PAGO</span>;
+        return <span className="flex items-center text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-emerald-100 uppercase tracking-wide"><CheckCircle size={12} className="mr-1.5"/> PAGO</span>;
       case 'PENDENTE':
-        return <span className="flex items-center text-orange-700 bg-orange-50 px-2 py-1 rounded-md text-xs font-bold border border-orange-100"><Clock size={12} className="mr-1"/> PENDENTE</span>;
+        return <span className="flex items-center text-orange-700 bg-orange-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-orange-100 uppercase tracking-wide"><Clock size={12} className="mr-1.5"/> PENDENTE</span>;
       case 'CANCELADO':
-        return <span className="flex items-center text-red-700 bg-red-50 px-2 py-1 rounded-md text-xs font-bold border border-red-100"><XCircle size={12} className="mr-1"/> CANCELADO</span>;
+        return <span className="flex items-center text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-red-100 uppercase tracking-wide"><XCircle size={12} className="mr-1.5"/> CANCELADO</span>;
       default:
-        return <span className="text-gray-600 bg-gray-100 px-2 py-1 rounded-md text-xs font-bold">{status}</span>;
+        return <span className="text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide">{status}</span>;
     }
   };
 
-  if (isLoading) return <div className="flex justify-center py-20"><Loader className="animate-spin text-blue-600" size={40} /></div>;
-  if (!event) return <div className="p-8 text-center text-gray-500">Evento não encontrado.</div>;
+  if (isLoading) return <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>;
+  if (!event) return <div className="p-12 text-center text-gray-500 font-medium">Evento não encontrado.</div>;
 
   return (
-    <div className="max-w-6xl mx-auto animate-in fade-in duration-500">
+    <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
       
+      {/* Modal de Confirmação */}
+      <ConfirmationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmPayment}
+        title="Confirmar Pagamento"
+        description={
+            <>
+                Deseja confirmar o pagamento da inscrição de <strong>{selectedAttendee?.nome}</strong>?
+                <br/><br/>
+                <span className="text-sm text-gray-500">Esta ação registrará que o pagamento foi recebido em dinheiro ou outro meio externo.</span>
+            </>
+        }
+        confirmText="Confirmar Recebimento"
+        isProcessing={isProcessing}
+        colorClass="emerald"
+      />
+
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 border-b border-gray-200 pb-6">
         <div className="flex items-center">
-            <button onClick={() => navigate('/admin/events')} className="mr-4 p-2 hover:bg-gray-100 rounded-full transition-colors">
-                <ArrowLeft size={24} className="text-gray-600" />
+            <button onClick={() => navigate('/admin/events')} className="mr-5 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-[#1e3a8a]">
+                <ArrowLeft size={24} />
             </button>
             <div>
-                <h1 className="text-2xl font-bold text-gray-800">{event.nomeEvento}</h1>
-                <p className="text-gray-500 text-sm">Gerenciamento de Inscritos</p>
+                <h1 className="text-2xl font-bold text-[#0f172a] mb-1">{event.nomeEvento}</h1>
+                <p className="text-gray-500 text-sm flex items-center gap-2">
+                    Gerenciamento de Inscritos 
+                    <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                    {new Date(event.dataEvento).toLocaleDateString('pt-BR')}
+                </p>
             </div>
         </div>
-        <div className="flex gap-3">
-             <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-bold">
+        <div className="flex items-center gap-3">
+             <div className="bg-[#eff6ff] text-[#1e3a8a] px-4 py-2 rounded-lg font-bold text-sm border border-blue-100 shadow-sm">
                 Total: {attendees.length}
              </div>
-             <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg" title="Exportar CSV">
+             <button className="p-2.5 text-gray-500 hover:text-[#1e3a8a] hover:bg-white border border-gray-200 rounded-lg shadow-sm transition-all bg-white" title="Exportar CSV">
                 <Download size={20} />
              </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="premium-card p-0 overflow-hidden flex flex-col">
         
         {/* Barra de Busca */}
-        <div className="p-4 border-b border-gray-100 flex items-center gap-3 bg-gray-50/50">
+        <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
             <Search size={20} className="text-gray-400" />
             <input 
                 type="text" 
-                placeholder="Buscar por nome ou email..." 
-                className="bg-transparent border-none outline-none flex-1 text-sm text-gray-700"
+                placeholder="Buscar por nome, email ou ID..." 
+                className="bg-transparent border-none outline-none flex-1 text-sm text-gray-700 placeholder-gray-400 font-medium"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
             />
@@ -121,53 +154,49 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
         <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
                 <thead>
-                    <tr className="bg-gray-50 text-gray-600 text-xs uppercase tracking-wider">
-                        <th className="p-4 font-semibold">Nome do Inscrito</th>
-                        <th className="p-4 font-semibold">Contato</th>
-                        <th className="p-4 font-semibold">Data</th>
-                        <th className="p-4 font-semibold">Pagamento</th>
-                        <th className="p-4 font-semibold text-center">Status</th>
-                        <th className="p-4 font-semibold text-right">Ações</th> 
+                    <tr className="bg-white text-gray-400 text-xs uppercase font-bold border-b border-gray-100 tracking-wider">
+                        <th className="px-6 py-4">Inscrito</th>
+                        <th className="px-6 py-4">Contato</th>
+                        <th className="px-6 py-4">Data</th>
+                        <th className="px-6 py-4">Pagamento</th>
+                        <th className="px-6 py-4 text-center">Status</th>
+                        <th className="px-6 py-4 text-right">Ações</th> 
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-50">
                     {filteredAttendees.length > 0 ? (
                         filteredAttendees.map((att: any, index: number) => (
-                            <tr key={att.numero_inscricao || att.id || index} className="hover:bg-blue-50/30 transition-colors">
-                                <td className="p-4">
-                                    <p className="font-bold text-gray-800">{att.nome}</p>
-                                    <span className="text-xs text-gray-400">ID: {att.numero_inscricao}</span>
+                            <tr key={att.numero_inscricao || att.id || index} className="hover:bg-[#eff6ff]/30 transition-colors group">
+                                <td className="px-6 py-4">
+                                    <p className="font-bold text-[#0f172a] text-sm">{att.nome}</p>
+                                    <span className="text-[10px] text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100 mt-1 inline-block">
+                                        #{att.numero_inscricao}
+                                    </span>
                                 </td>
-                                <td className="p-4">
-                                    <p className="text-sm text-gray-600">{att.email}</p>
+                                <td className="px-6 py-4">
+                                    <p className="text-sm text-gray-600 mb-0.5">{att.email}</p>
                                     <p className="text-xs text-gray-400">{att.telefone}</p>
                                 </td>
-                                <td className="p-4 text-sm text-gray-600">
+                                <td className="px-6 py-4 text-sm text-gray-500 font-medium">
                                     {att.data_inscricao ? new Date(att.data_inscricao).toLocaleDateString('pt-BR') : '-'}
                                 </td>
                                 
-                                <td className="p-4 text-sm text-gray-600">
-                                    <p className='text-sm font-medium text-gray-600'>{event.preco > 0 ? `R$ ${event.preco.toFixed(2)}` : 'Grátis'}</p>
-                                    <p className="text-xs text-gray-400">{att.tipoPagamento || '-'}</p>
+                                <td className="px-6 py-4 text-sm">
+                                    <p className='font-bold text-[#1e3a8a]'>{event.preco > 0 ? `R$ ${Number(event.preco).toFixed(2)}` : 'Grátis'}</p>
+                                    <p className="text-[10px] text-gray-400 uppercase font-medium mt-0.5">{att.tipoPagamento || '-'}</p>
                                 </td>
-                                <td className="p-4 text-right">
+                                <td className="px-6 py-4 text-center">
                                     {renderStatus(att.status)}
                                 </td>
-                                <td className="p-4 text-right">
+                                <td className="px-6 py-4 text-right">
                                     {att.status?.toLowerCase() === 'pendente' && (
                                         <button 
-                                            onClick={() => handleConfirmPayment(att.numero_inscricao)}
-                                            disabled={processingId === att.numero_inscricao}
-                                            className="inline-flex items-center px-3 py-1.5 bg-green-50 text-green-700 hover:bg-green-100 rounded-md text-xs font-bold border border-green-200 transition-colors disabled:opacity-50"
+                                            onClick={() => openConfirmModal(att)}
+                                            disabled={isProcessing}
+                                            className="inline-flex items-center px-3 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold border border-emerald-200 transition-all shadow-sm hover:shadow active:scale-95 disabled:opacity-50"
                                             title="Confirmar Pagamento Manualmente"
                                         >
-                                            {processingId === att.numero_inscricao ? (
-                                                <Loader size={14} className="animate-spin" />
-                                            ) : (
-                                                <>
-                                                    <CheckSquare size={14} className="mr-1.5" /> Confirmar
-                                                </>
-                                            )}
+                                            <CheckSquare size={14} className="mr-1.5" /> Confirmar
                                         </button>
                                     )}
                                 </td>
@@ -175,10 +204,12 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                         ))
                     ) : (
                         <tr>
-                            <td colSpan={7} className="p-8 text-center text-gray-500">
-                                <div className="flex flex-col items-center">
-                                    <AlertCircle size={32} className="mb-2 text-gray-300" />
-                                    <p>Nenhum inscrito encontrado.</p>
+                            <td colSpan={6} className="p-12 text-center text-gray-400">
+                                <div className="flex flex-col items-center justify-center">
+                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
+                                        <AlertCircle size={32} className="opacity-30" />
+                                    </div>
+                                    <p className="font-medium">Nenhum inscrito encontrado.</p>
                                 </div>
                             </td>
                         </tr>

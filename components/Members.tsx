@@ -106,7 +106,7 @@ const Members: React.FC<MembersProps> = ({ churchId }) => {
                 <div className="relative">
                     <input 
                         required 
-                        className="input-field pl-10"
+                        className="input-field !pl-10"
                         value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})}
                         placeholder="Nome completo do membro"
                     />
@@ -119,7 +119,7 @@ const Members: React.FC<MembersProps> = ({ churchId }) => {
                 <div className="relative">
                     <input 
                         type="email" 
-                        className="input-field pl-10"
+                        className="input-field !pl-10"
                         value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} 
                         placeholder="email@exemplo.com"
                     />
@@ -131,7 +131,7 @@ const Members: React.FC<MembersProps> = ({ churchId }) => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Telefone</label>
                 <div className="relative">
                     <input 
-                        className="input-field pl-10"
+                        className="input-field !pl-10"
                         value={formData.telefone} onChange={e => setFormData({...formData, telefone: e.target.value})} 
                         placeholder="(00) 00000-0000"
                     />
@@ -143,7 +143,7 @@ const Members: React.FC<MembersProps> = ({ churchId }) => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">CPF</label>
                 <div className="relative">
                     <input 
-                        className="input-field pl-10"
+                        className="input-field !pl-10"
                         value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} 
                         placeholder="000.000.000-00"
                     />
@@ -209,7 +209,7 @@ const Members: React.FC<MembersProps> = ({ churchId }) => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center justify-end gap-2 opacity-30 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => startEdit(member)} className="p-2 text-gray-400 hover:text-[#1e3a8a] hover:bg-blue-50 rounded-lg transition-colors" title="Editar">
                             <Edit2 size={18}/>
                           </button>
