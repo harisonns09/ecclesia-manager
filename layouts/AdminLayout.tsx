@@ -26,19 +26,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-gray-900 overflow-hidden">
-      {/* Sidebar controla o menu lateral */}
+    <div className="flex h-screen bg-[#f8fafc] font-sans text-[#0f172a] overflow-hidden">
+      
+      {/* Sidebar (Menu Lateral) */}
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 
-        onLogout={onLogout}
+        onLogout={onLogout} 
         currentUser={currentUser}
         onExitChurch={onExitChurch}
         activeTab={window.location.pathname}
       />
 
-      <div className="flex-1 flex flex-col overflow-hidden w-full">
-        {/* Navbar precisa saber como abrir o Sidebar */}
+      {/* Conteúdo Principal */}
+      <div className="flex-1 flex flex-col overflow-hidden w-full relative">
         <Navbar 
           isAuthenticated={isAuthenticated} 
           onLoginClick={() => {}} 

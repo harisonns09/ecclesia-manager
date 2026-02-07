@@ -144,6 +144,10 @@ export const eventApi = {
     });
     return response.data;
   },
+
+  confirmPayment: async (churchId: string, eventId: string, registrationId: string) => {
+    await api.put(`/api/igrejas/${churchId}/eventos/${eventId}/inscricoes/${registrationId}/confirmar`);
+  },
 };
 
 // ===== MINISTRY ENDPOINTS =====

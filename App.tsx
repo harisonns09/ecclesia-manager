@@ -18,13 +18,12 @@ import EventFormPage from './components/EventFormPage';
 import EventAttendeesPage from './components/EventAttendeesPage';
 import RegistrationStatusPage from './components/RegistrationStatusPage';
 
-import { Church } from './types';
+import { Church, Transaction, Event } from './types';
 import { churchApi } from './services/api';
 
 function App() {
   const navigate = useNavigate();
 
-  // Estado Global
   const [currentChurch, setCurrentChurch] = useState<Church | null>(() => {
     const saved = localStorage.getItem('selectedChurch');
     return saved ? JSON.parse(saved) : null;
@@ -34,8 +33,11 @@ function App() {
     return !!localStorage.getItem('church_token');
   });
 
-  const [currentUser, setCurrentUser] = useState<{name: string, email: string, role: string} | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ name: string, email: string, role: string } | null>(null);
   const [churches, setChurches] = useState<Church[]>([]);
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>();
 
   useEffect(() => {
     loadChurches();
@@ -80,107 +82,115 @@ function App() {
 
   return (
     <Routes>
-        <Route path="/" element={
-          !currentChurch ? (
-            <>
-              <ChurchSelector 
-                churches={churches} 
-                onSelect={handleChurchSelect}
-                onAdd={handleAddChurch}
-                onEdit={handleEditChurch}
-                onDelete={handleDeleteChurch}
+      {/* ROTA PÚBLICA / LANDING PAGE */}
+      <Route path="/" element={
+        !currentChurch ? (
+          <>
+            <ChurchSelector
+              churches={churches}
+              onSelect={handleChurchSelect}
+              onAdd={handleAddChurch}
+              onEdit={handleEditChurch}
+              onDelete={handleDeleteChurch}
+            />
+            <CookieConsent />
+          </>
+        ) : (
+          <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+            <Navbar
+              isAuthenticated={isAuthenticated}
+              onLoginClick={() => navigate('/login')}
+              activeTab="home"
+              setActiveTab={() => { }}
+              onLogout={handleLogout}
+              churchName={currentChurch.name}
+              onChangeChurch={handleExitChurch}
+            />
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <PublicHome
+                events={events} // Passando estado
+                church={currentChurch}
+                onNavigateToEvents={() => navigate('/eventos')}
+                onNavigateToRegistration={(event) => navigate(`/evento/${event.id}/inscricao`)}
               />
-              <CookieConsent />
-            </>
-          ) : (
-            <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-              <Navbar 
-                isAuthenticated={isAuthenticated} 
-                onLoginClick={() => navigate('/login')}
-                activeTab="home"
-                setActiveTab={() => {}}
-                onLogout={handleLogout}
-                churchName={currentChurch.name}
-                onChangeChurch={handleExitChurch} 
-              />
-              
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <PublicHome 
-                  events={[]} 
-                  church={currentChurch}
-                  onNavigateToEvents={() => navigate('/eventos')}
-                  onNavigateToRegistration={(event) => navigate(`/evento/${event.id}/inscricao`)}
+            </main>
+            <CookieConsent />
+          </div>
+        )
+      } />
+
+      {/* ROTA PÚBLICA DE EVENTOS */}
+      <Route path="/eventos" element={
+        !currentChurch ? <Navigate to="/" /> : (
+          <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+            <Navbar
+              isAuthenticated={isAuthenticated}
+              onLoginClick={() => navigate('/login')}
+              activeTab="events-public"
+              setActiveTab={() => { }}
+              onLogout={handleLogout}
+              churchName={currentChurch.name}
+              onChangeChurch={handleExitChurch}
+            />
+
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                <h1 className="text-3xl font-bold text-gray-900 mb-6">Agenda de Eventos</h1>
+                <Events
+                  isAdmin={false}
+                  churchId={currentChurch.id}
+                  events={events}
+                  setEvents={setEvents}
+                  onRegisterClick={(event) => navigate(`/evento/${event.id}/inscricao`)}
                 />
-              </main>
-              <CookieConsent />
-            </div>
-          )
-        } />
+              </div>
+            </main>
+            <CookieConsent />
+          </div>
+        )
+      } />
 
-        <Route path="/eventos" element={
-          !currentChurch ? <Navigate to="/" /> : (
-            <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
-              <Navbar 
-                isAuthenticated={isAuthenticated} 
-                onLoginClick={() => navigate('/login')} 
-                activeTab="events-public" 
-                setActiveTab={() => {}} 
-                onLogout={handleLogout}
-                churchName={currentChurch.name}
-                onChangeChurch={handleExitChurch} 
-              />
-              
-              <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Agenda de Eventos</h1>
-                  <Events 
-                    isAdmin={false} 
-                    churchId={currentChurch.id} 
-                    events={[]} 
-                    setEvents={() => {}} 
-                    onRegisterClick={(event) => navigate(`/evento/${event.id}/inscricao`)}
-                  />
-                </div>
-              </main>
-              <CookieConsent />
-            </div>
-          )
-        } />
+      {/* LOGIN */}
+      <Route path="/login" element={
+        isAuthenticated ? <Navigate to="/admin/dashboard" /> : (
+          <Login onLogin={handleLogin} onBack={() => navigate('/')} />
+        )
+      } />
 
-        
-        <Route path="/login" element={
-          isAuthenticated ? <Navigate to="/admin/dashboard" /> : (
-            <Login onLogin={handleLogin} onBack={() => navigate('/')} />
-          )
-        } />
+      {/* ROTAS PÚBLICAS DE INSCRIÇÃO */}
+      <Route path="/evento/:id/inscricao" element={<EventRegistrationPage />} />
+      <Route path="/minha-inscricao/:id" element={<RegistrationStatusPage />} />
 
-        
-        <Route path="/evento/:id/inscricao" element={<EventRegistrationPage />} />
-        <Route path="/minha-inscricao/:id" element={<RegistrationStatusPage />} />
-
-        
-        <Route path="/admin" element={
-          <AdminLayout 
-            isAuthenticated={isAuthenticated}
-            currentChurch={currentChurch}
-            onLogout={handleLogout}
-            onExitChurch={handleExitChurch}
-            currentUser={currentUser}
+      {/* ÁREA ADMINISTRATIVA (PROTEGIDA) */}
+      <Route path="/admin" element={
+        <AdminLayout
+          isAuthenticated={isAuthenticated}
+          currentChurch={currentChurch}
+          onLogout={handleLogout}
+          onExitChurch={handleExitChurch}
+          currentUser={currentUser}
+        />
+      }>
+        <Route path="dashboard" element={<Dashboard churchId={currentChurch?.id || ''} />} />
+        <Route path="members" element={<Members churchId={currentChurch?.id || ''} />} />
+        <Route path="ministries" element={<Ministries churchId={currentChurch?.id || ''} />} />
+        <Route path="small-groups" element={<SmallGroups churchId={currentChurch?.id || ''} />} />
+        <Route path="events" element={
+          <Events
+            isAdmin={true}
+            churchId={currentChurch?.id || ''}
+            events={events}
+            setEvents={setEvents}
           />
-        }>
-          <Route path="dashboard" element={<Dashboard churchId={currentChurch?.id || ''} />} />
-          <Route path="members" element={<Members churchId={currentChurch?.id || ''} />} />
-          <Route path="ministries" element={<Ministries churchId={currentChurch?.id || ''} />} />
-          <Route path="small-groups" element={<SmallGroups churchId={currentChurch?.id || ''} />} />
-          <Route path="events" element={<Events isAdmin={true} churchId={currentChurch?.id || ''} events={[]} setEvents={() => {}} />} />
-          <Route path="events/new" element={<EventFormPage churchId={currentChurch?.id || ''} />} />        
-          <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
-          <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
-          
-          <Route index element={<Navigate to="dashboard" />} />
-        </Route>
+        } />
+        <Route path="events/new" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
+        <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
+        <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
+        <Route index element={<Navigate to="dashboard" />} />
+      </Route>
 
-        <Route path="*" element={<Navigate to="/" />} />
+      <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, UserPlus, Loader, Users, Search, X, ArrowRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, UserPlus, Loader, Users, Search, X, ArrowRight, DollarSign } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Event } from '../types'; 
 import { eventApi } from '../services/api';
@@ -17,7 +17,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
   const [localEvents, setLocalEvents] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Estados para o Modal de Busca de Inscrição
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchId, setSearchId] = useState('');
 
@@ -60,7 +59,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
   const handleSearchRegistration = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchId.trim()) {
-        // Redireciona para a página de status pública
         navigate(`/minha-inscricao/${searchId.trim()}`);
         setIsSearchModalOpen(false);
         setSearchId('');
@@ -68,31 +66,30 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 relative">
+    <div className="space-y-8 animate-in fade-in duration-500 relative">
       
-      {/* MODAL DE BUSCA (Apenas Público) */}
       {isSearchModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in zoom-in-95">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-bold text-gray-800">Consultar Inscrição</h3>
-                    <button onClick={() => setIsSearchModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/60 p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 border border-gray-200">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-xl font-bold text-[#0f172a]">Consultar Inscrição</h3>
+                    <button onClick={() => setIsSearchModalOpen(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
                         <X size={24} />
                     </button>
                 </div>
-                <p className="text-gray-500 text-sm mb-4">
-                    Digite o seu cpf para verificar o status e acessar o pagamento.
+                <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+                    Digite o número da sua inscrição (recebido por e-mail ou na tela de confirmação) para verificar o status e acessar o pagamento.
                 </p>
-                <form onSubmit={handleSearchRegistration} className="flex gap-2">
+                <form onSubmit={handleSearchRegistration} className="flex gap-3">
                     <input 
                         type="text" 
                         placeholder="Ex: 12345"
-                        className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="input-field flex-1 text-center font-mono tracking-wider text-lg"
                         value={searchId}
                         onChange={(e) => setSearchId(e.target.value)}
                         autoFocus
                     />
-                    <button type="submit" className="bg-blue-600 text-white px-6 rounded-xl font-bold hover:bg-blue-700 transition-colors flex items-center">
+                    <button type="submit" className="btn-primary px-6 !rounded-lg shadow-lg">
                         <ArrowRight size={20} />
                     </button>
                 </form>
@@ -100,115 +97,126 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">
-          {isAdmin ? 'Gerenciamento de Eventos' : 'Próximos Eventos'}
-        </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-gray-200 pb-6">
+        <div>
+            <h2 className="text-2xl font-bold text-[#0f172a]">
+            {isAdmin ? 'Gerenciamento de Eventos' : 'Próximos Eventos'}
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">Confira a agenda e participe das atividades.</p>
+        </div>
         
         <div className="flex gap-3">
-            {/* Botão para Admin: Criar Evento */}
             {isAdmin && (
             <button 
                 onClick={() => navigate('/admin/events/new')}
-                className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shadow-sm transition-all"
+                className="btn-primary shadow-md"
             >
-                <Plus size={20} className="mr-2" />
+                <Plus size={18} />
                 Novo Evento
             </button>
             )}
 
-            {/* Botão para Público: Consultar Inscrição */}
             {!isAdmin && (
                 <button 
                     onClick={() => setIsSearchModalOpen(true)}
-                    className="flex items-center justify-center px-4 py-2.5 bg-white text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 font-medium shadow-sm transition-all"
+                    className="btn-secondary shadow-sm hover:shadow-md"
                 >
-                    <Search size={18} className="mr-2" />
+                    <Search size={18} />
                     Minha Inscrição
                 </button>
             )}
         </div>
       </div>
 
-      {/* Lista */}
       {isLoading && localEvents.length === 0 ? (
-        <div className="flex justify-center py-12"><Loader className="animate-spin text-blue-600" size={32} /></div>
+        <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>
       ) : localEvents.length === 0 ? (
-        <div className="bg-white p-12 rounded-xl border border-dashed border-gray-300 text-center">
-          <Calendar className="mx-auto text-gray-300 mb-4" size={40} />
-          <h3 className="text-lg font-medium text-gray-900">Nenhum evento agendado</h3>
-          {isAdmin && <p className="text-gray-500 mt-1">Clique em "Novo Evento" para começar.</p>}
+        <div className="bg-gray-50 p-16 rounded-2xl border border-dashed border-gray-300 text-center">
+          <Calendar className="mx-auto text-gray-300 mb-4 opacity-50" size={48} />
+          <h3 className="text-xl font-bold text-gray-800">Nenhum evento agendado</h3>
+          <p className="text-gray-500 mt-2">A agenda está livre por enquanto.</p>
+          {isAdmin && <p className="text-blue-600 mt-4 text-sm font-semibold cursor-pointer hover:underline" onClick={() => navigate('/admin/events/new')}>Criar o primeiro evento</p>}
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-6">
           {localEvents.map((event: any) => (
-            <div key={event.id} className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col md:flex-row md:items-center justify-between group">
-              <div className="flex-1">
-                <div className="flex flex-wrap items-center mb-3 gap-y-2">
-                  <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mr-3 flex items-center">
-                    <Calendar size={12} className="mr-1" />
-                    {new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
-                  </div>
-                  
-                  {event.ministerioResponsavel && (
-                      <div className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs font-semibold mr-3 border border-gray-200">
-                        {event.ministerioResponsavel}
-                      </div>
-                  )}
+            <div key={event.id} className="premium-card p-0 flex flex-col md:flex-row overflow-hidden group hover:border-blue-300">
+              
+              <div className="bg-[#eff6ff] md:w-32 flex flex-col items-center justify-center p-6 text-center border-b md:border-b-0 md:border-r border-blue-100 group-hover:bg-blue-50 transition-colors">
+                 <span className="text-sm font-bold text-blue-600 uppercase tracking-widest mb-1">
+                    {new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR', { month: 'short' })}
+                 </span>
+                 <span className="text-4xl font-extrabold text-[#1e3a8a]">
+                    {new Date(event.dataEvento + 'T00:00:00').getDate()}
+                 </span>
+                 <span className="text-xs text-gray-500 mt-2 font-medium">
+                    {new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR', { weekday: 'short' })}
+                 </span>
+              </div>
 
-                  <h3 className="text-lg font-bold text-gray-900 mr-4">{event.nomeEvento}</h3>
+              <div className="p-6 flex-1 flex flex-col justify-center">
+                <div className="flex flex-wrap items-center mb-3 gap-2">
+                  {event.ministerioResponsavel && (
+                      <span className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border border-gray-200">
+                        {event.ministerioResponsavel}
+                      </span>
+                  )}
                   
                   {event.preco > 0 ? (
-                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-md text-xs font-bold border border-emerald-100">
+                    <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100 flex items-center">
+                      <DollarSign size={12} className="mr-0.5" />
                       R$ {Number(event.preco).toFixed(2)}
                     </span>
                   ) : (
-                    <span className="bg-gray-50 text-gray-600 px-2.5 py-0.5 rounded-md text-xs font-bold border border-gray-200">Gratuito</span>
+                    <span className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md text-xs font-bold border border-blue-100">Gratuito</span>
                   )}
                 </div>
 
-                <div className="flex flex-wrap text-sm text-gray-500 gap-x-6 gap-y-2 mt-2">
-                  <span className="flex items-center"><Clock size={16} className="mr-1.5 text-blue-400" /> {event.horario}</span>
-                  <span className="flex items-center"><MapPin size={16} className="mr-1.5 text-blue-400" /> {event.local}</span>
+                <h3 className="text-xl font-bold text-[#0f172a] mb-2 group-hover:text-[#1e3a8a] transition-colors">{event.nomeEvento}</h3>
+                
+                <div className="flex flex-wrap text-sm text-gray-500 gap-x-6 gap-y-2 mb-4">
+                  <span className="flex items-center"><Clock size={16} className="mr-2 text-blue-400" /> {event.horario}</span>
+                  <span className="flex items-center"><MapPin size={16} className="mr-2 text-blue-400" /> {event.local}</span>
                   {isAdmin && event.inscricoes && (
-                      <span className="flex items-center text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                        <UserPlus size={16} className="mr-1.5" /> {event.inscricoes.length} inscritos
+                      <span className="flex items-center text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-medium">
+                        <Users size={14} className="mr-1.5" /> {event.inscricoes.length} inscritos
                       </span>
                   )}
                 </div>
-                {event.descricao && <p className="mt-4 text-gray-600 text-sm border-t border-gray-100 pt-3 line-clamp-2">{event.descricao}</p>}
+                
+                {event.descricao && <p className="text-gray-600 text-sm line-clamp-2 leading-relaxed">{event.descricao}</p>}
               </div>
               
-              <div className="mt-6 md:mt-0 md:ml-8 flex items-center flex-shrink-0 gap-2 border-t md:border-t-0 pt-4 md:pt-0 border-gray-100">
+              <div className="p-6 bg-gray-50/50 border-t md:border-t-0 md:border-l border-gray-100 flex items-center justify-end md:justify-center">
                 {isAdmin ? (
-                  <>
+                  <div className="flex items-center gap-2">
                     <button 
                         onClick={() => navigate(`/admin/events/${event.id}/attendees`)}
-                        className="px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 rounded-lg hover:bg-blue-100 flex items-center transition-colors"
+                        className="p-2.5 text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:shadow-sm transition-all"
                         title="Ver Inscritos"
                     >
-                      <Users size={16} className="mr-2" /> Inscritos
+                      <Users size={20} />
                     </button>
 
                     <button 
                         onClick={() => navigate(`/admin/events/edit/${event.id}`)}
-                        className="p-2 text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-blue-600 transition-colors"
+                        className="p-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#1e3a8a] hover:border-blue-300 transition-all"
                         title="Editar"
                     >
                       <Edit2 size={20} />
                     </button>
+                    
                     <button 
                         onClick={() => handleDeleteEvent(String(event.id))} 
-                        className="p-2 text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors"
+                        className="p-2.5 text-red-600 bg-white border border-gray-300 rounded-lg hover:bg-red-50 hover:border-red-200 transition-all"
                         title="Excluir"
                     >
                       <Trash2 size={20} />
                     </button>
-                  </>
+                  </div>
                 ) : (
-                  <button onClick={() => onRegisterClick && onRegisterClick(event)} className="w-full md:w-auto px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-bold shadow-sm">
-                    Inscrever-se
+                  <button onClick={() => onRegisterClick && onRegisterClick(event)} className="w-full md:w-auto btn-primary shadow-md hover:shadow-lg">
+                    Inscrever-se <ArrowRight size={18} className="ml-1" />
                   </button>
                 )}
               </div>
