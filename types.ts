@@ -5,7 +5,8 @@ export interface Church {
   address: string;
   city: string;
   state: string;      
-   slug: string;    
+  cnpj: string; 
+  slug: string;   
   // themeColor: string; // Remova se o Java não mandar
 }
 

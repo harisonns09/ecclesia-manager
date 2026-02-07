@@ -3,8 +3,9 @@ import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest,
 
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
-  baseURL: 'http://localhost:8080', 
+  //baseURL: 'http://localhost:8080', 
   //baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
+  baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
 });
 
 // Interceptador para adicionar o Token automaticamente em toda requisição
@@ -15,7 +16,7 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
-
+ 
 export default api;
 
 // ===== AUTHENTICATION ENDPOINTS =====
@@ -125,16 +126,27 @@ export const eventApi = {
     await api.delete(`/api/igrejas/${churchId}/eventos/${eventId}`);
   },
   
-  register: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
-     const response = await api.post(`/api/igrejas/${churchId}/eventos/${eventId}/inscricao`, data);
+  register: async (eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
+     const response = await api.post(`/api/eventos/${eventId}/inscricao`, data);
      return response.data;
   },
 
   // Solicita ao Backend que crie um link de checkout na InfinitePay
   createPaymentCheckout: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string, amount: number, numeroInscricao: string }) => {
     // POST para o seu backend Java
-    const response = await api.post<CheckoutResponse>(`/api/igrejas/${churchId}/eventos/${eventId}/checkout`, data);
+    const response = await api.post<CheckoutResponse>(`/api/eventos/${eventId}/checkout`, data);
     return response.data;
+  },
+
+  updatePaymentMethod: async (churchId: string, eventId: string, registrationId: string, method: 'ONLINE' | 'DINHEIRO') => {
+    const response = await api.put(`/api/igrejas/${churchId}/eventos/${eventId}/inscricoes/${registrationId}/pagamento`, { 
+        formaPagamento: method 
+    });
+    return response.data;
+  },
+
+  confirmPayment: async ( eventId: string, registrationId: string) => {
+    await api.put(`/api/inscricoes/confirmarPagamento/${eventId}/${registrationId}`);
   },
 };
 
@@ -230,4 +242,11 @@ export const prayerRequestApi = {
   delete: async (churchId: string, requestId: string) => {
     await api.delete(`/api/igrejas/${churchId}/prayer-requests/${requestId}`);
   },
+};
+
+export const inscricaoApi = {
+  getRegistrationStatus: async (id: string) => {
+    const response = await api.get(`/api/inscricoes/${id}`);
+    return response.data;
+  }
 };

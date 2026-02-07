@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Edit2, Save, X, User } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, X, User, Save } from 'lucide-react';
 import { Ministry, Member } from '../types';
 import { ministryApi, memberApi } from '../services/api';
 
@@ -9,10 +9,9 @@ interface MinistriesProps {
 
 const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
   const [ministries, setMinistries] = useState<Ministry[]>([]);
-  const [members, setMembers] = useState<Member[]>([]); // Para selecionar líderes
+  const [members, setMembers] = useState<Member[]>([]); 
   const [isLoading, setIsLoading] = useState(false);
   
-  // Estado do Formulário
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<Ministry>>({ 
@@ -21,7 +20,6 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
     description: '' 
   });
 
-  // Carregar dados ao iniciar ou mudar de igreja
   useEffect(() => {
     if (churchId) {
       loadData();
@@ -31,7 +29,6 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Buscamos Ministérios e Membros em paralelo
       const [ministriesData, membersData] = await Promise.all([
         ministryApi.getByChurch(churchId),
         memberApi.getByChurch(churchId)
@@ -52,15 +49,11 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
 
     try {
       if (editingId) {
-        // Editar
         const updated = await ministryApi.update(churchId, editingId, formData);
         setMinistries(prev => prev.map(m => m.id === editingId ? updated : m));
-        alert("Ministério atualizado!");
       } else {
-        // Criar
         const created = await ministryApi.create(churchId, formData as Ministry);
         setMinistries(prev => [...prev, created]);
-        alert("Ministério criado!");
       }
       resetForm();
     } catch (error) {
@@ -71,12 +64,10 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este ministério?")) return;
-    
     try {
       await ministryApi.delete(churchId, id);
       setMinistries(prev => prev.filter(m => m.id !== id));
     } catch (error) {
-      console.error("Erro ao excluir:", error);
       alert("Erro ao excluir ministério.");
     }
   };
@@ -95,43 +86,46 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-          <Users className="mr-2 text-purple-600" /> Ministérios e Grupos
-        </h2>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+        <div>
+            <h2 className="text-2xl font-bold text-[#0f172a]">Ministérios</h2>
+            <p className="text-gray-500 text-sm mt-1">Organize os grupos e equipes da igreja.</p>
+        </div>
         <button 
           onClick={() => { resetForm(); setShowForm(!showForm); }} 
-          className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center shadow-sm transition-colors"
+          className={showForm ? "btn-secondary" : "btn-primary shadow-lg"}
         >
           {showForm ? <X size={20} className="mr-2" /> : <Plus size={20} className="mr-2" />}
           {showForm ? 'Cancelar' : 'Novo Ministério'}
         </button>
       </div>
 
-      {/* Formulário */}
       {showForm && (
-        <div className="bg-white p-6 rounded-xl border border-purple-100 shadow-lg">
-           <h3 className="font-bold mb-4 text-gray-700">{editingId ? 'Editar' : 'Cadastrar'} Ministério</h3>
-           <form onSubmit={handleSubmit} className="space-y-4">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="premium-card p-0 overflow-hidden mb-8 animate-in slide-in-from-top-4">
+           <div className="bg-gray-50/50 p-6 border-b border-gray-100">
+              <h3 className="font-bold text-[#0f172a] text-lg">{editingId ? 'Editar Ministério' : 'Novo Ministério'}</h3>
+           </div>
+           
+           <form onSubmit={handleSubmit} className="p-6 space-y-5">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nome</label>
                  <input 
-                    placeholder="Ex: Louvor, Infantil, Recepção" 
-                    className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" 
-                    value={formData.name} 
-                    onChange={e => setFormData({...formData, name: e.target.value})} 
-                    required 
+                   placeholder="Ex: Louvor, Infantil, Recepção" 
+                   className="input-field" 
+                   value={formData.name} 
+                   onChange={e => setFormData({...formData, name: e.target.value})} 
+                   required 
                  />
                </div>
                <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Líder Responsável</label>
-                 {/* Dropdown se houver membros, senão input texto */}
+                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Líder Responsável</label>
                  {members.length > 0 ? (
                    <div className="relative">
                      <select 
-                       className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none appearance-none bg-white"
+                       className="input-field appearance-none bg-white pr-10"
                        value={formData.leaderName}
                        onChange={e => setFormData({...formData, leaderName: e.target.value})}
                      >
@@ -140,32 +134,32 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
                          <option key={m.id} value={m.nome}>{m.nome}</option>
                        ))}
                      </select>
-                     <User size={16} className="absolute right-3 top-3 text-gray-400 pointer-events-none" />
+                     <User size={18} className="absolute right-3 top-3.5 text-gray-400 pointer-events-none" />
                    </div>
                  ) : (
                    <input 
-                      placeholder="Nome do líder" 
-                      className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" 
-                      value={formData.leaderName} 
-                      onChange={e => setFormData({...formData, leaderName: e.target.value})} 
+                     placeholder="Nome do líder" 
+                     className="input-field" 
+                     value={formData.leaderName} 
+                     onChange={e => setFormData({...formData, leaderName: e.target.value})} 
                    />
                  )}
                </div>
              </div>
              
              <div>
-               <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Descrição</label>
                <textarea 
-                  placeholder="Objetivo e atividades do ministério..." 
-                  className="w-full border p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none resize-none h-24" 
-                  value={formData.description} 
-                  onChange={e => setFormData({...formData, description: e.target.value})} 
+                 placeholder="Objetivo e atividades do ministério..." 
+                 className="input-field resize-none h-28" 
+                 value={formData.description} 
+                 onChange={e => setFormData({...formData, description: e.target.value})} 
                />
              </div>
 
-             <div className="flex gap-3 justify-end pt-2">
-               <button type="button" onClick={resetForm} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancelar</button>
-               <button type="submit" className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium flex items-center shadow-md">
+             <div className="flex gap-3 justify-end pt-2 border-t border-gray-100 mt-2">
+               <button type="button" onClick={resetForm} className="btn-secondary">Cancelar</button>
+               <button type="submit" className="btn-primary shadow-md">
                  <Save size={18} className="mr-2" /> Salvar
                </button>
              </div>
@@ -173,44 +167,46 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
         </div>
       )}
 
-      {/* Lista de Ministérios */}
       {isLoading ? (
-        <div className="text-center py-10 text-gray-500">Carregando ministérios...</div>
+        <div className="text-center py-12 text-gray-500">Carregando ministérios...</div>
       ) : ministries.length === 0 ? (
-        <div className="text-center py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
           <Users size={48} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500">Nenhum ministério cadastrado.</p>
+          <p className="text-gray-500 font-medium">Nenhum ministério cadastrado.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {ministries.map(ministry => (
-            <div key={ministry.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-purple-300 transition-all group">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-bold text-lg text-gray-800">{ministry.name}</h3>
-                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs">
+            <div key={ministry.id} className="premium-card p-6 hover:border-[#1e3a8a]/30 group flex flex-col h-full">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="font-bold text-lg text-[#0f172a] line-clamp-1">{ministry.name}</h3>
+                <div className="w-10 h-10 rounded-lg bg-[#eff6ff] flex items-center justify-center text-[#1e3a8a] font-bold text-sm border border-blue-100 shadow-sm">
                   {ministry.name.charAt(0)}
                 </div>
               </div>
               
-              <div className="mb-4">
-                <p className="text-sm text-gray-500 flex items-center mb-1">
-                  <User size={14} className="mr-1" />
-                  <span className="font-medium text-gray-700">{ministry.leaderName || 'Sem líder definido'}</span>
+              <div className="mb-6 flex-1">
+                <div className="flex items-center mb-3 text-sm text-gray-600 bg-gray-50 p-2 rounded-lg border border-gray-100">
+                  <User size={16} className="mr-2 text-[#1e3a8a]" />
+                  <span className="font-semibold text-gray-800 mr-1">Líder:</span>
+                  <span className="truncate">{ministry.leaderName || 'Não definido'}</span>
+                </div>
+                <p className="text-gray-500 text-sm line-clamp-3 leading-relaxed">
+                    {ministry.description || 'Sem descrição cadastrada.'}
                 </p>
-                <p className="text-gray-600 text-sm line-clamp-2 min-h-[40px]">{ministry.description || 'Sem descrição.'}</p>
               </div>
 
-              <div className="flex justify-end gap-2 border-t pt-4 mt-auto opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
                 <button 
                   onClick={() => startEdit(ministry)} 
-                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:text-[#1e3a8a] hover:bg-blue-50 rounded-lg transition-colors"
                   title="Editar"
                 >
                   <Edit2 size={18} />
                 </button>
                 <button 
                   onClick={() => handleDelete(ministry.id)} 
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                   title="Excluir"
                 >
                   <Trash2 size={18} />

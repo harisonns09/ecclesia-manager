@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
-import { Plus, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, X } from 'lucide-react';
 import { Transaction, TransactionType, TransactionCategory } from '../types';
 
 interface FinancialsProps {
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  churchId: string; // Adicionado para corrigir o erro de tipo
 }
 
-const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }) => {
+const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, churchId }) => {
   const [showModal, setShowModal] = useState(false);
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>({
     description: '',
@@ -20,18 +21,21 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
 
   const handleAddTransaction = (e: React.FormEvent) => {
     e.preventDefault();
-    // Fix: Add churchId property (will be populated correctly in App.tsx)
+    
     const trans: Transaction = {
       id: Math.random().toString(36).substr(2, 9),
-      churchId: '',
+      churchId: churchId, // Usando o ID recebido via props
       description: newTrans.description || 'Sem descrição',
       amount: Number(newTrans.amount),
       type: newTrans.type || TransactionType.INCOME,
       category: newTrans.category || TransactionCategory.OTHER,
       date: newTrans.date || new Date().toISOString()
     };
+
     setTransactions([trans, ...transactions]);
     setShowModal(false);
+    
+    // Reset form
     setNewTrans({
       description: '',
       amount: 0,
@@ -41,7 +45,7 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
     });
   };
 
-  // Prepare Chart Data
+  // Preparar dados para o gráfico
   const incomeByCategory = transactions
     .filter(t => t.type === TransactionType.INCOME)
     .reduce((acc, curr) => {
@@ -54,62 +58,87 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
     value: incomeByCategory[key]
   }));
 
-  const COLORS = ['#10B981', '#3B82F6', '#8B5CF6', '#F59E0B', '#EF4444'];
+  const COLORS = ['#1e3a8a', '#3b82f6', '#93c5fd', '#f59e0b', '#ef4444'];
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-800">Controle Financeiro</h2>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
+        <div>
+            <h2 className="text-2xl font-bold text-[#0f172a]">Controle Financeiro</h2>
+            <p className="text-gray-500 text-sm mt-1">Gestão de entradas e saídas da igreja.</p>
+        </div>
         <button 
           onClick={() => setShowModal(true)}
-          className="flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+          className="btn-primary shadow-lg hover:shadow-xl"
         >
           <Plus size={20} className="mr-2" />
           Nova Transação
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Transactions List */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <h3 className="font-semibold text-gray-700">Histórico de Transações</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* Lista de Transações */}
+        <div className="lg:col-span-2 premium-card p-0 overflow-hidden flex flex-col h-full">
+          <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+            <h3 className="font-bold text-[#0f172a]">Histórico Recente</h3>
+            <span className="text-xs font-semibold text-gray-500 bg-white px-2 py-1 rounded border border-gray-200">
+                Últimos Lançamentos
+            </span>
           </div>
-          <div className="overflow-x-auto">
+          
+          <div className="overflow-x-auto flex-1">
             <table className="w-full text-left">
               <thead>
-                <tr className="bg-white text-gray-500 text-xs uppercase font-medium border-b border-gray-100">
-                  <th className="px-6 py-3">Data</th>
-                  <th className="px-6 py-3">Descrição</th>
-                  <th className="px-6 py-3">Categoria</th>
-                  <th className="px-6 py-3 text-right">Valor</th>
+                <tr className="bg-white text-gray-400 text-xs uppercase font-bold border-b border-gray-100">
+                  <th className="px-6 py-4">Data</th>
+                  <th className="px-6 py-4">Descrição</th>
+                  <th className="px-6 py-4">Categoria</th>
+                  <th className="px-6 py-4 text-right">Valor</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-50">
                 {transactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-500">
+                  <tr key={t.id} className="hover:bg-[#eff6ff]/30 transition-colors group">
+                    <td className="px-6 py-4 text-sm text-gray-500 font-medium">
                       {new Date(t.date).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-6 py-4 font-medium text-gray-900">{t.description}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{t.category}</td>
-                    <td className={`px-6 py-4 text-right font-bold ${t.type === TransactionType.INCOME ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className="px-6 py-4 font-semibold text-gray-800 group-hover:text-[#1e3a8a] transition-colors">
+                        {t.description}
+                    </td>
+                    <td className="px-6 py-4">
+                        <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                            {t.category}
+                        </span>
+                    </td>
+                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-red-600'}`}>
                       {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
                 {transactions.length === 0 && (
-                   <tr><td colSpan={4} className="text-center py-6 text-gray-500">Nenhuma transação registrada.</td></tr>
+                   <tr>
+                       <td colSpan={4} className="text-center py-12 text-gray-400 flex flex-col items-center justify-center">
+                           <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-2">
+                               <DollarSign size={20} className="opacity-30" />
+                           </div>
+                           Nenhuma transação registrada.
+                       </td>
+                   </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Chart */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 flex flex-col items-center justify-center">
-          <h3 className="font-semibold text-gray-700 mb-4 w-full text-left">Distribuição de Entradas</h3>
-          <div className="w-full h-64">
+        {/* Gráfico */}
+        <div className="premium-card p-6 flex flex-col items-center justify-center h-full min-h-[350px]">
+          <h3 className="font-bold text-[#0f172a] mb-6 w-full text-left border-b border-gray-100 pb-4">
+              Distribuição de Entradas
+          </h3>
+          <div className="w-full h-64 flex-1">
             {pieData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -119,20 +148,24 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
                     cy="50%"
                     innerRadius={60}
                     outerRadius={80}
-                    fill="#8884d8"
+                    fill="#1e3a8a"
                     paddingAngle={5}
                     dataKey="value"
                   >
                     {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
                     ))}
                   </Pie>
-                  <ReTooltip formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`} />
-                  <Legend />
+                  <ReTooltip 
+                    formatter={(value: number) => `R$ ${value.toLocaleString('pt-BR')}`}
+                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} 
+                  />
+                  <Legend iconType="circle" />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-gray-400 text-sm">
+              <div className="flex flex-col h-full items-center justify-center text-gray-400 text-sm">
+                <div className="w-16 h-16 rounded-full border-4 border-gray-100 border-t-gray-200 mb-3"></div>
                 Sem dados suficientes para o gráfico.
               </div>
             )}
@@ -140,45 +173,58 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
         </div>
       </div>
 
-       {/* Add Transaction Modal */}
+       {/* Modal de Nova Transação */}
        {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800 flex items-center">
-                <DollarSign size={20} className="mr-2 text-emerald-600" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172a]/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-bold text-[#0f172a] flex items-center text-lg">
+                <div className="p-2 bg-emerald-100 rounded-lg mr-3">
+                    <DollarSign size={20} className="text-emerald-700" />
+                </div>
                 Nova Transação
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <span className="text-2xl">&times;</span>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors">
+                <X size={24} />
               </button>
             </div>
-            <form onSubmit={handleAddTransaction} className="p-6 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            
+            <form onSubmit={handleAddTransaction} className="p-6 space-y-5">
+              
+              {/* Tipo de Transação */}
+              <div className="grid grid-cols-2 gap-4 p-1 bg-gray-100 rounded-xl">
                 <button
                   type="button"
                   onClick={() => setNewTrans({...newTrans, type: TransactionType.INCOME})}
-                  className={`flex items-center justify-center py-2 px-4 rounded-lg border ${newTrans.type === TransactionType.INCOME ? 'bg-green-50 border-green-500 text-green-700' : 'border-gray-200 text-gray-600'}`}
+                  className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
+                      newTrans.type === TransactionType.INCOME 
+                      ? 'bg-white text-emerald-600 shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
-                  <TrendingUp size={18} className="mr-2" />
+                  <TrendingUp size={16} className="mr-2" />
                   Entrada
                 </button>
                 <button
                   type="button"
                   onClick={() => setNewTrans({...newTrans, type: TransactionType.EXPENSE})}
-                  className={`flex items-center justify-center py-2 px-4 rounded-lg border ${newTrans.type === TransactionType.EXPENSE ? 'bg-red-50 border-red-500 text-red-700' : 'border-gray-200 text-gray-600'}`}
+                  className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
+                      newTrans.type === TransactionType.EXPENSE 
+                      ? 'bg-white text-red-600 shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
-                  <TrendingDown size={18} className="mr-2" />
+                  <TrendingDown size={16} className="mr-2" />
                   Saída
                 </button>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Descrição</label>
                 <input 
-                  type="text" 
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  type="text" required
+                  className="input-field"
+                  placeholder="Ex: Oferta de Domingo"
                   value={newTrans.description}
                   onChange={e => setNewTrans({...newTrans, description: e.target.value})}
                 />
@@ -186,20 +232,19 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor (R$)</label>
                   <input 
-                    type="number" 
-                    required
-                    step="0.01"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    type="number" required step="0.01"
+                    className="input-field font-mono font-medium"
+                    placeholder="0,00"
                     value={newTrans.amount}
                     onChange={e => setNewTrans({...newTrans, amount: Number(e.target.value)})}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Categoria</label>
                   <select 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="input-field appearance-none bg-white"
                     value={newTrans.category}
                     onChange={e => setNewTrans({...newTrans, category: e.target.value as TransactionCategory})}
                   >
@@ -211,30 +256,29 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions }
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data</label>
                 <input 
-                  type="date" 
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  type="date" required
+                  className="input-field"
                   value={newTrans.date}
                   onChange={e => setNewTrans({...newTrans, date: e.target.value})}
                 />
               </div>
 
-              <div className="pt-4 flex justify-end space-x-3">
-                 <button 
-                  type="button" 
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit" 
-                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
-                >
-                  Registrar
-                </button>
+              <div className="pt-2 flex gap-3">
+                  <button 
+                    type="button" 
+                    onClick={() => setShowModal(false)}
+                    className="btn-secondary flex-1 justify-center"
+                  >
+                    Cancelar
+                  </button>
+                  <button 
+                    type="submit" 
+                    className="btn-primary flex-1 justify-center shadow-md"
+                  >
+                    Confirmar
+                  </button>
               </div>
             </form>
           </div>

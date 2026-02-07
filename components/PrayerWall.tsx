@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, Plus, MessageCircle, Lock, Globe, ThumbsUp } from 'lucide-react';
+import { Heart, Plus, MessageCircle, Lock, Globe, ThumbsUp, X } from 'lucide-react';
 import { PrayerRequest } from '../types';
 
 interface PrayerWallProps {
@@ -29,7 +29,6 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
       prayedCount: 0,
       isAnonymous: newRequest.isAnonymous || false
     };
-    // Add to beginning of list
     setRequests([request, ...requests]);
     setShowModal(false);
     setNewRequest({ request: '', authorName: '', category: 'Outros', isAnonymous: false });
@@ -43,70 +42,80 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
 
   const getCategoryColor = (cat: string) => {
     switch (cat) {
-      case 'Saúde': return 'bg-rose-100 text-rose-700';
-      case 'Família': return 'bg-blue-100 text-blue-700';
-      case 'Financeiro': return 'bg-green-100 text-green-700';
-      case 'Espiritual': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Saúde': return 'bg-rose-50 text-rose-700 border-rose-100';
+      case 'Família': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'Financeiro': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'Espiritual': return 'bg-purple-50 text-purple-700 border-purple-100';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 p-8 rounded-2xl border border-orange-100 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Mural de Oração</h2>
-          <p className="text-gray-600 max-w-xl">
-            "Orai uns pelos outros, para que sareis." Compartilhe seus pedidos ou interceda pelos irmãos.
-            Sua privacidade é respeitada.
+    <div className="space-y-8 animate-in fade-in duration-500">
+      
+      <div className="hero-gradient p-8 md:p-10 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
+        <div className="relative z-10">
+          <h2 className="text-3xl font-bold text-white mb-3">Mural de Oração</h2>
+          <p className="text-blue-100 max-w-xl text-lg leading-relaxed opacity-90">
+            "Orai uns pelos outros, para que sareis." Compartilhe seus pedidos e interceda pelos irmãos.
           </p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="flex-shrink-0 bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-200 flex items-center"
-        >
-          <Plus size={20} className="mr-2" />
-          Fazer Pedido de Oração
-        </button>
+        <div className="relative z-10">
+            <button 
+            onClick={() => setShowModal(true)}
+            className="bg-white text-[#1e3a8a] px-8 py-3.5 rounded-xl font-bold hover:bg-blue-50 transition-all shadow-lg hover:shadow-xl flex items-center hover:-translate-y-0.5"
+            >
+            <Plus size={20} className="mr-2" />
+            Fazer Pedido de Oração
+            </button>
+        </div>
+        
+        <div className="hero-overlay"></div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {requests.length === 0 ? (
-           <div className="col-span-full py-16 text-center">
-             <Heart size={48} className="mx-auto text-gray-200 mb-4" />
-             <p className="text-gray-500 font-medium">Nenhum pedido de oração ativo no momento.</p>
+           <div className="col-span-full py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
+             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <Heart size={40} className="text-gray-300" />
+             </div>
+             <h3 className="text-lg font-bold text-gray-700">Nenhum pedido ativo</h3>
+             <p className="text-gray-500">Seja o primeiro a compartilhar um motivo de oração.</p>
            </div>
         ) : (
           requests.map(req => (
-            <div key={req.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col">
+            <div key={req.id} className="premium-card p-6 flex flex-col hover:border-[#1e3a8a]/30 group">
               <div className="flex justify-between items-start mb-4">
-                <span className={`text-xs font-bold px-3 py-1 rounded-full ${getCategoryColor(req.category)}`}>
+                <span className={`text-xs font-bold px-3 py-1 rounded-full border ${getCategoryColor(req.category)}`}>
                   {req.category}
                 </span>
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 font-medium">
                   {new Date(req.date).toLocaleDateString('pt-BR')}
                 </span>
               </div>
               
-              <p className="text-gray-800 text-lg mb-6 leading-relaxed flex-1">
-                "{req.request}"
-              </p>
+              <div className="flex-1 mb-6 relative">
+                 <div className="absolute -left-2 -top-2 text-6xl text-gray-100 font-serif leading-none select-none">“</div>
+                 <p className="text-gray-700 text-lg leading-relaxed relative z-10 italic">
+                    {req.request}
+                 </p>
+              </div>
               
-              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+              <div className="flex items-center justify-between pt-5 border-t border-gray-100">
                 <div className="flex items-center text-sm text-gray-500">
                   {req.isAnonymous ? (
-                    <Lock size={14} className="mr-1.5" />
+                    <Lock size={16} className="mr-2 text-gray-400" />
                   ) : (
-                    <Globe size={14} className="mr-1.5" />
+                    <Globe size={16} className="mr-2 text-blue-400" />
                   )}
-                  <span className="font-medium truncate max-w-[100px]">{req.authorName}</span>
+                  <span className="font-semibold text-gray-700 truncate max-w-[120px]">{req.authorName}</span>
                 </div>
                 
                 <button 
                   onClick={() => handlePray(req.id)}
-                  className="flex items-center gap-2 text-sm font-medium text-orange-600 bg-orange-50 px-3 py-1.5 rounded-lg hover:bg-orange-100 transition-colors group"
+                  className="flex items-center gap-2 text-sm font-bold text-[#1e3a8a] bg-[#eff6ff] px-4 py-2 rounded-lg hover:bg-blue-100 transition-all active:scale-95 group-hover:shadow-sm"
                 >
-                  <Heart size={16} className={`group-hover:fill-orange-600 transition-colors ${req.prayedCount > 0 ? 'fill-orange-600' : ''}`} />
+                  <Heart size={18} className={`transition-colors ${req.prayedCount > 0 ? 'fill-[#1e3a8a]' : ''}`} />
                   {req.prayedCount > 0 ? `${req.prayedCount} oraram` : 'Vou orar'}
                 </button>
               </div>
@@ -115,21 +124,21 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
         )}
       </div>
 
-      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800">Novo Pedido de Oração</h3>
-              <button onClick={() => setShowModal(false)}><span className="text-2xl text-gray-400">&times;</span></button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172a]/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="font-bold text-[#0f172a] text-lg">Novo Pedido de Oração</h3>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500"><X size={20} /></button>
             </div>
-            <form onSubmit={handleAddRequest} className="p-6 space-y-4">
+            
+            <form onSubmit={handleAddRequest} className="p-6 space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Seu Pedido</label>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Seu Pedido</label>
                 <textarea 
                   required
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:outline-none resize-none"
+                  className="input-field resize-none text-base"
                   placeholder="Descreva seu pedido aqui..."
                   value={newRequest.request}
                   onChange={e => setNewRequest({...newRequest, request: e.target.value})}
@@ -138,9 +147,9 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Categoria</label>
                   <select 
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="input-field bg-white"
                     value={newRequest.category}
                     onChange={e => setNewRequest({...newRequest, category: e.target.value as any})}
                   >
@@ -153,25 +162,25 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
                 </div>
                 
                 <div className="flex items-end pb-2">
-                   <label className="flex items-center cursor-pointer select-none">
-                     <input 
-                      type="checkbox"
-                      className="w-5 h-5 text-orange-500 rounded border-gray-300 focus:ring-orange-500"
-                      checked={newRequest.isAnonymous}
-                      onChange={e => setNewRequest({...newRequest, isAnonymous: e.target.checked})}
-                     />
-                     <span className="ml-2 text-sm text-gray-700">Pedido Anônimo</span>
-                   </label>
+                    <label className="flex items-center cursor-pointer select-none p-2 hover:bg-gray-50 rounded-lg w-full transition-colors border border-transparent hover:border-gray-200">
+                      <input 
+                       type="checkbox"
+                       className="w-5 h-5 text-[#1e3a8a] rounded border-gray-300 focus:ring-[#1e3a8a]"
+                       checked={newRequest.isAnonymous}
+                       onChange={e => setNewRequest({...newRequest, isAnonymous: e.target.checked})}
+                      />
+                      <span className="ml-3 text-sm font-medium text-gray-700">Anônimo</span>
+                    </label>
                 </div>
               </div>
 
               {!newRequest.isAnonymous && (
-                <div>
-                   <label className="block text-sm font-medium text-gray-700 mb-1">Seu Nome</label>
+                <div className="animate-in fade-in slide-in-from-top-2">
+                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Seu Nome</label>
                    <input 
                     type="text"
                     required={!newRequest.isAnonymous}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-orange-500"
+                    className="input-field"
                     placeholder="Como gostaria de ser identificado?"
                     value={newRequest.authorName}
                     onChange={e => setNewRequest({...newRequest, authorName: e.target.value})}
@@ -179,13 +188,16 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
                 </div>
               )}
 
-              <div className="bg-orange-50 p-4 rounded-lg text-sm text-orange-800">
+              <div className="bg-blue-50/50 p-4 rounded-xl text-sm text-blue-800 border border-blue-100 flex items-start">
+                <Globe size={18} className="mr-2 mt-0.5 flex-shrink-0" />
                 <p>Este pedido será visível para os membros da comunidade para que possam orar por você.</p>
               </div>
 
-              <button type="submit" className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold hover:bg-orange-600 transition-colors">
-                Publicar Pedido
-              </button>
+              <div className="pt-2">
+                  <button type="submit" className="btn-primary w-full py-3.5 text-lg shadow-lg">
+                    Publicar Pedido
+                  </button>
+              </div>
             </form>
           </div>
         </div>

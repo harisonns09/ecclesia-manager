@@ -37,55 +37,70 @@ const Navbar: React.FC<NavbarProps> = ({
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
+        <div className="flex justify-between h-20"> {/* Altura um pouco maior para elegância */}
+          
+          {/* LADO ESQUERDO: LOGO E TROCAR IGREJA */}
           <div className="flex items-center">
             <button 
               onClick={onChangeChurch}
-              className="mr-3 p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              className="mr-4 p-2 rounded-full text-gray-400 hover:text-primary-900 hover:bg-primary-50 transition-all duration-200 group"
               title="Trocar Igreja"
             >
-              <ArrowLeft size={20} />
+              <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
             </button>
 
             <div 
-              className="flex-shrink-0 flex items-center gap-2 cursor-pointer"
+              className="flex-shrink-0 flex items-center gap-3 cursor-pointer group"
               onClick={() => navigate('/')}
             >
-              <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg">
+              {/* Logo Box - Azul Marinho */}
+              <div className="w-10 h-10 rounded-xl bg-primary-900 flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:bg-primary-800 transition-colors">
                 {churchName.charAt(0) || 'E'}
               </div>
-              <span className="text-xl font-bold text-gray-800 hidden md:block">
-                {churchName}
-              </span>
-              <span className="text-lg font-bold text-gray-800 md:hidden block truncate max-w-[150px]">
-                {churchName}
-              </span>
+              
+              <div className="flex flex-col justify-center">
+                <span className="text-lg font-bold text-gray-900 leading-none group-hover:text-primary-900 transition-colors hidden md:block">
+                  {churchName}
+                </span>
+                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden md:block">
+                  Portal de Membros
+                </span>
+                {/* Mobile Name */}
+                <span className="text-lg font-bold text-gray-900 md:hidden block truncate max-w-[150px]">
+                  {churchName}
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="hidden md:flex md:items-center md:space-x-8">
+          {/* CENTRO/DIREITA: NAVEGAÇÃO DESKTOP */}
+          <div className="hidden md:flex md:items-center md:space-x-4">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
-                className={`flex items-center px-3 py-2 text-sm font-medium transition-colors ${
+                className={`flex items-center px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 ${
                   activeTab === item.id 
-                    ? 'text-blue-600' 
-                    : 'text-gray-500 hover:text-gray-900'
+                    ? 'bg-primary-50 text-primary-900 shadow-sm ring-1 ring-primary-100' 
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >
-                <span className="mr-2">{item.icon}</span>
+                <span className={`mr-2 ${activeTab === item.id ? 'text-primary-700' : 'text-gray-400'}`}>
+                    {item.icon}
+                </span>
                 {item.label}
               </button>
             ))}
 
+            <div className="h-6 w-px bg-gray-200 mx-4"></div>
+
             {isAuthenticated ? (
-              <div className="flex items-center gap-2 ml-4">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => navigate('/admin/dashboard')}
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+                  className="px-5 py-2.5 rounded-lg bg-primary-900 text-white text-sm font-bold hover:bg-primary-800 transition-all shadow-md hover:shadow-lg flex items-center"
                 >
                   <LayoutDashboard size={18} className="mr-2" />
                   Painel
@@ -93,16 +108,16 @@ const Navbar: React.FC<NavbarProps> = ({
 
                 <button
                   onClick={onLogout}
-                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors flex items-center"
+                  className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center"
+                  title="Sair do sistema"
                 >
-                  <LogOut size={18} className="mr-2" />
-                  Sair
+                  <LogOut size={18} />
                 </button>
               </div>
             ) : (
               <button
                 onClick={onLoginClick}
-                className="ml-4 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors flex items-center shadow-sm"
+                className="px-5 py-2.5 rounded-lg bg-primary-900 text-white text-sm font-bold hover:bg-primary-800 transition-all shadow-md hover:shadow-lg flex items-center hover:-translate-y-0.5"
               >
                 <LogIn size={18} className="mr-2" />
                 Área Administrativa
@@ -110,6 +125,7 @@ const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
+          {/* MENU MOBILE TOGGLE */}
           <div className="flex items-center md:hidden">
             <button
               onClick={() => {
@@ -119,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   setIsOpen(!isOpen);
                 }
               }}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
+              className="inline-flex items-center justify-center p-2 rounded-lg text-gray-500 hover:text-primary-900 hover:bg-primary-50 focus:outline-none transition-colors"
             >
               {isOpen && !onSidebarToggle ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -127,25 +143,28 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
+      {/* MENU MOBILE EXPANDIDO */}
       {isOpen && !onSidebarToggle && (
-        <div className="md:hidden bg-white border-t border-gray-100">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <div className="md:hidden bg-white border-t border-gray-100 animate-in slide-in-from-top-2 duration-200 shadow-xl">
+          <div className="px-4 pt-3 pb-6 space-y-2">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => handleNavigation(item.id)}
-                className={`flex items-center w-full px-3 py-4 rounded-md text-base font-medium ${
+                className={`flex items-center w-full px-4 py-3 rounded-xl text-base font-semibold transition-colors ${
                   activeTab === item.id
-                    ? 'bg-blue-50 text-blue-600'
+                    ? 'bg-primary-50 text-primary-900 border border-primary-100'
                     : 'text-gray-600 hover:bg-gray-50'
                 }`}
               >
-                <span className="mr-3">{item.icon}</span>
+                <span className={`mr-3 ${activeTab === item.id ? 'text-primary-700' : 'text-gray-400'}`}>
+                    {item.icon}
+                </span>
                 {item.label}
               </button>
             ))}
             
-            <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col gap-3">
               {isAuthenticated ? (
                 <>
                   <button
@@ -153,9 +172,9 @@ const Navbar: React.FC<NavbarProps> = ({
                         navigate('/admin/dashboard');
                         setIsOpen(false);
                     }}
-                    className="w-full flex items-center px-3 py-4 text-base font-medium text-blue-600 hover:bg-blue-50 rounded-md"
+                    className="w-full flex items-center justify-center px-4 py-3.5 text-base font-bold text-white bg-primary-900 hover:bg-primary-800 rounded-xl shadow-md"
                   >
-                    <LayoutDashboard size={18} className="mr-3" />
+                    <LayoutDashboard size={20} className="mr-2" />
                     Ir para o Painel
                   </button>
 
@@ -164,10 +183,10 @@ const Navbar: React.FC<NavbarProps> = ({
                       onLogout();
                       setIsOpen(false);
                     }}
-                    className="w-full flex items-center px-3 py-4 text-base font-medium text-red-600 hover:bg-red-50 rounded-md"
+                    className="w-full flex items-center justify-center px-4 py-3.5 text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl border border-red-100"
                   >
-                    <LogOut size={18} className="mr-3" />
-                    Sair
+                    <LogOut size={20} className="mr-2" />
+                    Sair da Conta
                   </button>
                 </>
               ) : (
@@ -176,9 +195,9 @@ const Navbar: React.FC<NavbarProps> = ({
                     onLoginClick();
                     setIsOpen(false);
                   }}
-                  className="w-full flex items-center px-3 py-4 text-base font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+                  className="w-full flex items-center justify-center px-4 py-3.5 text-base font-bold text-white bg-primary-900 hover:bg-primary-800 rounded-xl shadow-md"
                 >
-                  <LogIn size={18} className="mr-3" />
+                  <LogIn size={20} className="mr-2" />
                   Área Administrativa
                 </button>
               )}
