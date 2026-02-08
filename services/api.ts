@@ -165,7 +165,7 @@ export const ministryApi = {
     return response.data;
   },
   update: async (churchId: string, ministryId: string, ministry: Partial<Ministry>) => {
-    const response = await api.put<Ministry>(`/api/igrejas/${churchId}/ministerio/${ministryId}`, ministry);
+    const response = await api.put<Ministry>(`/api/igrejas/${churchId}/ministerios/${ministryId}`, ministry);
     return response.data;
   },
   delete: async (churchId: string, ministryId: string) => {
@@ -247,6 +247,20 @@ export const prayerRequestApi = {
 export const inscricaoApi = {
   getRegistrationStatus: async (id: string) => {
     const response = await api.get(`/api/inscricoes/${id}`);
+    return response.data;
+  }
+};
+
+export const financialApi = {
+  // Buscar todas as transações de uma igreja
+  getByChurch: async (churchId: string) => {
+    const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transacoes`);
+    return response.data;
+  },
+
+  // Criar uma nova transação
+  create: async (churchId: string, transaction: Partial<Transaction>) => {
+    const response = await api.post<Transaction>(`/api/igrejas/${churchId}/transacoes`, transaction);
     return response.data;
   }
 };

@@ -1,16 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
-import { Plus, TrendingUp, TrendingDown, DollarSign, X } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, X, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { Transaction, TransactionType, TransactionCategory } from '../types';
+import { financialApi } from '../services/api'; // <--- IMPORTANTE
 
 interface FinancialsProps {
   transactions: Transaction[];
   setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
-  churchId: string; // Adicionado para corrigir o erro de tipo
+  churchId: string;
 }
 
 const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, churchId }) => {
   const [showModal, setShowModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Estado do formulário
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>({
     description: '',
     amount: 0,
@@ -19,30 +23,64 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
     date: new Date().toISOString().split('T')[0]
   });
 
-  const handleAddTransaction = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const trans: Transaction = {
-      id: Math.random().toString(36).substr(2, 9),
-      churchId: churchId, // Usando o ID recebido via props
-      description: newTrans.description || 'Sem descrição',
-      amount: Number(newTrans.amount),
-      type: newTrans.type || TransactionType.INCOME,
-      category: newTrans.category || TransactionCategory.OTHER,
-      date: newTrans.date || new Date().toISOString()
-    };
+  // Estados do Modal de Feedback
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [isError, setIsError] = useState(false);
 
-    setTransactions([trans, ...transactions]);
-    setShowModal(false);
-    
-    // Reset form
-    setNewTrans({
-      description: '',
-      amount: 0,
-      type: TransactionType.INCOME,
-      category: TransactionCategory.TITHE,
-      date: new Date().toISOString().split('T')[0]
-    });
+  // 1. Carregar transações do Backend ao abrir a tela
+  useEffect(() => {
+    if (churchId) {
+      loadTransactions();
+    }
+  }, [churchId]);
+
+  const loadTransactions = async () => {
+    setIsLoading(true);
+    try {
+      const data = await financialApi.getByChurch(churchId);
+      setTransactions(data);
+    } catch (error) {
+      console.error("Erro ao carregar finanças:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleFeedback = (msg: string, error = false) => {
+    setFeedbackMessage(msg);
+    setIsError(error);
+    setShowFeedbackModal(true);
+  };
+
+  // 2. Salvar no Backend
+  const handleAddTransaction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!churchId) return;
+
+    try {
+      // Chama a API
+      const createdTransaction = await financialApi.create(churchId, newTrans);
+      
+      // Atualiza a lista na tela (adiciona o novo no topo)
+      setTransactions([createdTransaction, ...transactions]);
+      
+      setShowModal(false);
+      handleFeedback("Transação registrada com sucesso!");
+      
+      // Limpa o formulário
+      setNewTrans({
+        description: '',
+        amount: 0,
+        type: TransactionType.INCOME,
+        category: TransactionCategory.TITHE,
+        date: new Date().toISOString().split('T')[0]
+      });
+
+    } catch (error) {
+      console.error("Erro ao criar transação:", error);
+      handleFeedback("Erro ao registrar transação. Tente novamente.", true);
+    }
   };
 
   // Preparar dados para o gráfico
@@ -61,8 +99,29 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
   const COLORS = ['#1e3a8a', '#3b82f6', '#93c5fd', '#f59e0b', '#ef4444'];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-8 animate-in fade-in duration-500 relative">
       
+      {/* --- MODAL DE FEEDBACK --- */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#0f172a]/60 backdrop-blur-sm animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95 border border-gray-100">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${isError ? 'bg-red-100' : 'bg-emerald-100'}`}>
+              {isError ? <XCircle size={32} className="text-red-600" /> : <CheckCircle size={32} className="text-emerald-600" />}
+            </div>
+            <h3 className={`text-xl font-bold mb-2 ${isError ? 'text-red-700' : 'text-[#0f172a]'}`}>
+                {isError ? 'Erro!' : 'Sucesso!'}
+            </h3>
+            <p className="text-gray-500 mb-8">{feedbackMessage}</p>
+            <button 
+              onClick={() => setShowFeedbackModal(false)}
+              className={`w-full py-3 text-lg shadow-lg rounded-xl font-bold text-white transition-all ${isError ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a8a] hover:bg-[#172554]'}`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
         <div>
@@ -100,7 +159,9 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {transactions.map((t) => (
+                {isLoading ? (
+                    <tr><td colSpan={4} className="text-center py-10"><Loader className="animate-spin mx-auto text-blue-600"/></td></tr>
+                ) : transactions.map((t) => (
                   <tr key={t.id} className="hover:bg-[#eff6ff]/30 transition-colors group">
                     <td className="px-6 py-4 text-sm text-gray-500 font-medium">
                       {new Date(t.date).toLocaleDateString('pt-BR')}
@@ -114,11 +175,11 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
                         </span>
                     </td>
                     <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {t.type === TransactionType.INCOME ? '+' : '-'} R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {t.type === TransactionType.INCOME ? '+' : '-'} R$ {Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
-                {transactions.length === 0 && (
+                {!isLoading && transactions.length === 0 && (
                    <tr>
                        <td colSpan={4} className="text-center py-12 text-gray-400 flex flex-col items-center justify-center">
                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-2">

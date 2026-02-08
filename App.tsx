@@ -37,7 +37,7 @@ function App() {
   const [churches, setChurches] = useState<Church[]>([]);
 
   const [events, setEvents] = useState<Event[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     loadChurches();
@@ -188,6 +188,13 @@ function App() {
         <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
         <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
         <Route index element={<Navigate to="dashboard" />} />
+        <Route path="financials" element={
+            <Financials 
+                churchId={currentChurch?.id || ''} 
+                transactions={transactions} 
+                setTransactions={setTransactions} 
+            />
+          } />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />

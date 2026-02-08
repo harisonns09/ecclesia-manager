@@ -82,11 +82,10 @@ export interface ChatMessage {
 // New Types for Ministries
 export interface Ministry {
   id: string;
-  churchId: string;
-  name: string;
-  leaderName: string;
-  description: string;
-  color: string;
+  nome: string;
+  igrejaId: string;
+  liderResponsavel: string;
+
 }
 
 export interface Scale {
