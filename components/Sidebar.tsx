@@ -24,7 +24,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={20} /> },
     { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
     { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={20} /> },
-    { id: '/admin/prayer-wall', label: 'Mural de Oração', icon: <HeartHandshake size={20} /> },
+    // { id: '/admin/prayer-wall', label: 'Mural de Oração', icon: <HeartHandshake size={20} /> },
+    { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
   ];
 
   return (

@@ -10,24 +10,39 @@ export interface Church {
   // themeColor: string; // Remova se o Java não mandar
 }
 
+
 export enum MemberStatus {
   ACTIVE = 'Ativo',
   INACTIVE = 'Inativo',
-  VISITOR = 'Visitante'
+  VISITOR = 'Visitante', // Caso queira converter visitante em membro depois
 }
 
 export interface Member {
   id: string;
-  churchId: string;
+  igrejaId: string;
   nome: string;
   email: string;
   telefone: string;
-  ministerio: string;
-  status: MemberStatus;
-  dataNascimento?: string; 
-  cpf?: string;       
-}
+  cpf?: string;
+  
+  // --- Novos Campos ---
+  dataNascimento?: string;
+  genero?: 'M' | 'F';
+  estadoCivil?: string;
+  
+  // Endereço
+  cep?: string;
+  endereco?: string;
+  numero?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
 
+  // Eclesiástico
+  ministerio?: string;
+  dataBatismo?: string;
+  status: MemberStatus;
+}
 export enum TransactionType {
   INCOME = 'Entrada',
   EXPENSE = 'Saída'
@@ -125,4 +140,17 @@ export interface PrayerRequest {
 export interface CheckoutResponse {
   checkoutUrl: string;
   transactionId: string;
+}
+
+export type VisitorStatus = 'Visitante' | 'Em Acompanhamento' | 'Membro';
+
+export interface Visitor {
+  id: string;
+  churchId: string;
+  nome: string;
+  telefone: string;
+  dataVisita: string; // Data da primeira visita
+  dataAniversario?: string;
+  status: VisitorStatus;
+  observacao?: string; // Como conheceu a igreja, pedidos de oração, etc.
 }
