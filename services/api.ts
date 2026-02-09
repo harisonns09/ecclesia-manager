@@ -16,6 +16,28 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response, // Se der sucesso, só retorna
+  (error) => {
+    // Verifica se o erro é 401 (Não autorizado) ou 403 (Proibido)
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      
+      // Evita loop infinito se o erro for na própria rota de login
+      if (!window.location.pathname.includes('/login')) {
+          console.warn('Sessão expirada. Redirecionando para login...');
+          
+          // Remove o token inválido
+          localStorage.removeItem('church_token');
+          
+          // Força o redirecionamento para a tela de login
+          // Usamos window.location.href para garantir um refresh limpo do estado
+          window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
  
 export default api;
 
@@ -61,7 +83,7 @@ export const memberApi = {
     return response.data;
   },
   getById: async (churchId: string, memberId: string) => {
-    const response = await api.get<Member>(`/api/igrejas/${churchId}/membro/${memberId}`);
+    const response = await api.get<Member>(`/api/igrejas/${churchId}/membros/${memberId}`);
     return response.data;
   },
   create: async (churchId: string, member: Omit<Member, 'id'>) => {
@@ -165,7 +187,7 @@ export const ministryApi = {
     return response.data;
   },
   update: async (churchId: string, ministryId: string, ministry: Partial<Ministry>) => {
-    const response = await api.put<Ministry>(`/api/igrejas/${churchId}/ministerio/${ministryId}`, ministry);
+    const response = await api.put<Ministry>(`/api/igrejas/${churchId}/ministerios/${ministryId}`, ministry);
     return response.data;
   },
   delete: async (churchId: string, ministryId: string) => {
@@ -248,5 +270,46 @@ export const inscricaoApi = {
   getRegistrationStatus: async (id: string) => {
     const response = await api.get(`/api/inscricoes/${id}`);
     return response.data;
+  }
+};
+
+export const financialApi = {
+  // Buscar todas as transações de uma igreja
+  getByChurch: async (churchId: string) => {
+    const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transacoes`);
+    return response.data;
+  },
+
+  // Criar uma nova transação
+  create: async (churchId: string, transaction: Partial<Transaction>) => {
+    const response = await api.post<Transaction>(`/api/igrejas/${churchId}/transacoes`, transaction);
+    return response.data;
+  }
+};
+
+export const visitorApi = {
+  getByChurch: async (churchId: string) => {
+    // const response = await api.get<Visitor[]>(`/api/igrejas/${churchId}/visitantes`);
+    // return response.data;
+    
+    // MOCK TEMPORÁRIO PARA VOCÊ TESTAR VISUALMENTE
+    return [
+      { id: '1', churchId, name: 'Carlos Eduardo', phone: '(11) 99999-9999', visitDate: '2023-10-25', status: 'Visitante', observation: 'Veio convidado pelo Pedro.' },
+      { id: '2', churchId, name: 'Ana Clara', phone: '(11) 98888-8888', visitDate: '2023-10-20', status: 'Em Acompanhamento', observation: 'Gostou muito do louvor.' },
+    ] as any[]; 
+  },
+
+  create: async (churchId: string, visitor: Partial<any>) => {
+    const response = await api.post<any>(`/api/igrejas/${churchId}/visitantes`, visitor);
+    return response.data;
+  },
+
+  update: async (churchId: string, visitorId: string, visitor: Partial<any>) => {
+    const response = await api.put<any>(`/api/igrejas/${churchId}/visitantes/${visitorId}`, visitor);
+    return response.data;
+  },
+
+  delete: async (churchId: string, visitorId: string) => {
+    await api.delete(`/api/igrejas/${churchId}/visitantes/${visitorId}`);
   }
 };

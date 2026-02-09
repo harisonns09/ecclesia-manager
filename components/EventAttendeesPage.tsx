@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare } from 'lucide-react';
+import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare, DollarSign } from 'lucide-react';
 import { eventApi } from '../services/api';
 import ConfirmationModal from './ConfirmationModal'; 
 
@@ -38,6 +38,14 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
       setIsLoading(false);
     }
   };
+
+  // --- CÁLCULO DO TOTAL CONFIRMADO ---
+  const totalRevenue = attendees.reduce((acc, att) => {
+    if (att.status === 'PAGO') {
+        return acc + (Number(event?.preco) || 0);
+    }
+    return acc;
+  }, 0);
 
   const openConfirmModal = (attendee: any) => {
     setSelectedAttendee(attendee);
@@ -112,7 +120,7 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 mb-8 border-b border-gray-200 pb-6">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 border-b border-gray-200 pb-6">
         <div className="flex items-center">
             <button onClick={() => navigate('/admin/events')} className="mr-5 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-[#1e3a8a]">
                 <ArrowLeft size={24} />
@@ -126,10 +134,20 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                 </p>
             </div>
         </div>
-        <div className="flex items-center gap-3">
-             <div className="bg-[#eff6ff] text-[#1e3a8a] px-4 py-2 rounded-lg font-bold text-sm border border-blue-100 shadow-sm">
-                Total: {attendees.length}
+        
+        {/* Cards de Resumo */}
+        <div className="flex flex-wrap items-center gap-3">
+             {/* Total Inscritos */}
+             <div className="bg-[#eff6ff] text-[#1e3a8a] px-4 py-2.5 rounded-xl font-bold text-sm border border-blue-100 shadow-sm flex items-center">
+                Inscritos: {attendees.length}
              </div>
+
+             {/* Total Arrecadado (Novo) */}
+             <div className="bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm border border-emerald-100 shadow-sm flex items-center">
+                <DollarSign size={16} className="mr-1.5" />
+                Recebido: R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+             </div>
+
              <button className="p-2.5 text-gray-500 hover:text-[#1e3a8a] hover:bg-white border border-gray-200 rounded-lg shadow-sm transition-all bg-white" title="Exportar CSV">
                 <Download size={20} />
              </button>

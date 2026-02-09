@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './components/Dashboard';
-import Members from './components/Members';
+import MembersListPage from './components/MembersListPage';
+import MemberFormPage from './components/MemberFormPage';
 import Ministries from './components/Ministries';
 import SmallGroups from './components/SmallGroups';
 import Events from './components/Events';
@@ -17,6 +18,8 @@ import CookieConsent from './components/CookieConsent';
 import EventFormPage from './components/EventFormPage';
 import EventAttendeesPage from './components/EventAttendeesPage';
 import RegistrationStatusPage from './components/RegistrationStatusPage';
+import Visitors from './components/Visitors';
+import VisitorRegistrationPage from './components/VisitorRegistrationPage'; // <--- Importe aqui
 
 import { Church, Transaction, Event } from './types';
 import { churchApi } from './services/api';
@@ -37,7 +40,7 @@ function App() {
   const [churches, setChurches] = useState<Church[]>([]);
 
   const [events, setEvents] = useState<Event[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>();
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   useEffect(() => {
     loadChurches();
@@ -151,6 +154,12 @@ function App() {
         )
       } />
 
+      <Route path="/visitor" element={
+          !currentChurch ? <Navigate to="/" /> : (
+             <VisitorRegistrationPage church={currentChurch} />
+          )
+        } />
+
       {/* LOGIN */}
       <Route path="/login" element={
         isAuthenticated ? <Navigate to="/admin/dashboard" /> : (
@@ -173,7 +182,14 @@ function App() {
         />
       }>
         <Route path="dashboard" element={<Dashboard churchId={currentChurch?.id || ''} />} />
-        <Route path="members" element={<Members churchId={currentChurch?.id || ''} />} />
+        {/* Listagem (A rota principal /members agora aponta para a lista) */}
+        <Route path="members" element={<MembersListPage churchId={currentChurch?.id || ''} />} />
+        
+        {/* Cadastro Novo */}
+        <Route path="members/new" element={<MemberFormPage churchId={currentChurch?.id || ''} />} />
+        
+        {/* Edição (Usa o mesmo componente do form, mas captura o ID) */}
+        <Route path="members/edit/:id" element={<MemberFormPage churchId={currentChurch?.id || ''} />} />
         <Route path="ministries" element={<Ministries churchId={currentChurch?.id || ''} />} />
         <Route path="small-groups" element={<SmallGroups churchId={currentChurch?.id || ''} />} />
         <Route path="events" element={
@@ -188,6 +204,14 @@ function App() {
         <Route path="events/edit/:id" element={<EventFormPage churchId={currentChurch?.id || ''} />} />
         <Route path="events/:id/attendees" element={<EventAttendeesPage churchId={currentChurch?.id || ''} />} />
         <Route index element={<Navigate to="dashboard" />} />
+        <Route path="financials" element={
+            <Financials 
+                churchId={currentChurch?.id || ''} 
+                transactions={transactions} 
+                setTransactions={setTransactions} 
+            />
+          } />
+        <Route path="visitors" element={<Visitors churchId={currentChurch?.id || ''} />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" />} />
