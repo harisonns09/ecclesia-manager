@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { User, Mail, Phone, Calendar, Save, ArrowLeft, MapPin, Loader, Church as ChurchIcon, FileText } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Save, ArrowLeft, MapPin, Loader, Church as ChurchIcon, FileText, AlertCircle } from 'lucide-react';
 import { Member, MemberStatus } from '../types';
 import { memberApi } from '../services/api';
+import ConfirmationModal from './ConfirmationModal';
 
 interface MemberFormProps {
   churchId: string;
@@ -15,9 +16,13 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const initialFormState: Partial<Member> = {
-    nome: '', email: '', telefone: '', cpf: '',
+    nome: '', email: '', telefone: '', 
     dataNascimento: '', genero: 'M', estadoCivil: 'Solteiro(a)',
     cep: '', endereco: '', numero: '', bairro: '', cidade: '', estado: '',
     ministerio: 'Membro', status: MemberStatus.ACTIVE, dataBatismo: ''
@@ -25,33 +30,53 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
 
   const [formData, setFormData] = useState<Partial<Member>>(initialFormState);
 
-  // --- FUNÇÃO AUXILIAR DE MÁSCARA DE TELEFONE ---
+  const validateDate = (dateString: string | undefined): string | null => {
+    if (!dateString) return null;
+
+    const selectedDate = new Date(dateString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (selectedDate > today) {
+        return "A data não pode estar no futuro.";
+    }
+    if (selectedDate.getFullYear() < 1900) {
+        return "Ano inválido.";
+    }
+    return null;
+  };
+
+  const handleDateChange = (field: keyof Member) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData({ ...formData, [field]: value });
+
+    const error = validateDate(value);
+    setErrors(prev => {
+        const newErrors = { ...prev };
+        if (error) {
+            newErrors[field] = error;
+        } else {
+            delete newErrors[field];
+        }
+        return newErrors;
+    });
+  };
+
   const formatPhoneNumber = (value: string | undefined) => {
     if (!value) return '';
-    
-    // Remove tudo que não é dígito
     const numbers = value.replace(/\D/g, '');
-    
-    // Limita a 11 dígitos
     const limited = numbers.substring(0, 11);
 
-    // Aplica a máscara (XX) XXXXX-XXXX
     if (limited.length > 10) {
         return limited.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } 
-    // Aplica a máscara (XX) XXXX-XXXX (para fixos ou incompleto)
-    else if (limited.length > 6) {
+    } else if (limited.length > 6) {
         return limited.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-    } 
-    // Aplica a máscara (XX) ...
-    else if (limited.length > 2) {
+    } else if (limited.length > 2) {
         return limited.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
     }
-    
     return limited;
   };
 
-  // Handler específico para o input de telefone
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhoneNumber(e.target.value);
     setFormData({ ...formData, telefone: formatted });
@@ -68,7 +93,6 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
     try {
         const member = await memberApi.getById(churchId, id!);
         if (member) {
-            // Aplica a máscara ao carregar os dados do backend
             setFormData({
                 ...member,
                 telefone: formatPhoneNumber(member.telefone || '')
@@ -108,31 +132,48 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!churchId) return;
 
-    // --- LIMPEZA DOS DADOS ANTES DE ENVIAR ---
-    // Remove parênteses, traços e espaços do telefone e CPF
+    const errorsMap: {[key:string]: string} = {};
+    const birthError = validateDate(formData.dataNascimento);
+    if(birthError) errorsMap.dataNascimento = birthError;
+
+    const baptismError = validateDate(formData.dataBatismo);
+    if(baptismError) errorsMap.dataBatismo = baptismError;
+
+    if (Object.keys(errorsMap).length > 0) {
+        setErrors(errorsMap);
+        return;
+    }
+
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setIsSubmitting(true);
+
     const dataToSend = {
         ...formData,
-        telefone: formData.telefone?.replace(/\D/g, '') || '', // Remove formatação
-        cpf: formData.cpf?.replace(/\D/g, '') || '',          // Remove formatação (opcional)
+        telefone: formData.telefone?.replace(/\D/g, '') || '',
         igrejaId: churchId
     };
 
     try {
       if (isEditing && id) {
         await memberApi.update(churchId, id, dataToSend);
-        alert("Membro atualizado com sucesso!");
       } else {
         await memberApi.create(churchId, dataToSend as Member);
-        alert("Membro cadastrado com sucesso!");
       }
+      setIsModalOpen(false);
       navigate('/admin/members');
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar membro.");
+      alert("Erro ao salvar membro. Tente novamente.");
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -141,6 +182,22 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500 pb-12">
       
+      {/* Modal de Confirmação */}
+      <ConfirmationModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmSave}
+        title={isEditing ? "Salvar Alterações" : "Cadastrar Membro"}
+        description={
+            <>
+                Deseja confirmar {isEditing ? "as alterações no cadastro de" : "o cadastro de"} <strong>{formData.nome}</strong>?
+            </>
+        }
+        confirmText="Sim, Salvar"
+        isProcessing={isSubmitting}
+        colorClass="emerald"
+      />
+
       {/* Header com Botão Voltar */}
       <div className="flex items-center gap-4 mb-2">
         <button 
@@ -165,7 +222,7 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
            </div>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-8 space-y-8">
+        <form onSubmit={handlePreSubmit} className="p-8 space-y-8">
           
           {/* Seção 1: Dados Pessoais */}
           <div>
@@ -177,14 +234,23 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
                       <label className="label-field">Nome Completo</label>
                       <input required className="input-field" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} placeholder="Nome completo" />
                   </div>
-                  <div>
-                      <label className="label-field">CPF</label>
-                      <input className="input-field" value={formData.cpf} onChange={e => setFormData({...formData, cpf: e.target.value})} placeholder="000.000.000-00" />
-                  </div>
+                  
+                  
+                  {/* DATA DE NASCIMENTO (Com Validação) */}
                   <div>
                       <label className="label-field">Data de Nascimento</label>
-                      <input type="date" className="input-field" value={formData.dataNascimento} onChange={e => setFormData({...formData, dataNascimento: e.target.value})} />
+                      <input 
+                        type="date" 
+                        max={new Date().toISOString().split("T")[0]} // Trava HTML5
+                        className={`input-field ${errors.dataNascimento ? '!border-red-500 !bg-red-50' : ''}`}
+                        value={formData.dataNascimento} 
+                        onChange={handleDateChange('dataNascimento')} 
+                      />
+                      {errors.dataNascimento && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center"><AlertCircle size={12} className="mr-1"/> {errors.dataNascimento}</p>
+                      )}
                   </div>
+
                   <div>
                       <label className="label-field">Gênero</label>
                       <select className="input-field bg-white" value={formData.genero} onChange={e => setFormData({...formData, genero: e.target.value as 'M'|'F'})}>
@@ -215,15 +281,14 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
                       <input type="email" className="input-field" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="email@exemplo.com" />
                   </div>
                   
-                  {/* --- INPUT DE TELEFONE ATUALIZADO --- */}
                   <div>
                       <label className="label-field">Telefone / WhatsApp</label>
                       <input 
                         className="input-field" 
                         value={formData.telefone} 
-                        onChange={handlePhoneChange} // Usando o handler com máscara
+                        onChange={handlePhoneChange} 
                         placeholder="(00) 00000-0000" 
-                        maxLength={15} // Limita o tamanho visual
+                        maxLength={15} 
                       />
                   </div>
 
@@ -276,12 +341,23 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
                       <select className="input-field bg-white" value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as MemberStatus})}>
                           <option value="Ativo">Ativo</option>
                           <option value="Inativo">Inativo</option>
-                          <option value="Congregado">Congregado</option>
+                          <option value="Visitante">Visitante</option>
                       </select>
                   </div>
+                  
+                  {/* DATA DE BATISMO (Com Validação) */}
                   <div>
                       <label className="label-field">Data de Batismo</label>
-                      <input type="date" className="input-field" value={formData.dataBatismo} onChange={e => setFormData({...formData, dataBatismo: e.target.value})} />
+                      <input 
+                        type="date" 
+                        max={new Date().toISOString().split("T")[0]}
+                        className={`input-field ${errors.dataBatismo ? '!border-red-500 !bg-red-50' : ''}`}
+                        value={formData.dataBatismo} 
+                        onChange={handleDateChange('dataBatismo')} 
+                      />
+                      {errors.dataBatismo && (
+                        <p className="text-red-500 text-xs mt-1 flex items-center"><AlertCircle size={12} className="mr-1"/> {errors.dataBatismo}</p>
+                      )}
                   </div>
               </div>
           </div>

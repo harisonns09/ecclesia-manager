@@ -5,7 +5,7 @@ const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
   //baseURL: 'http://localhost:8080', 
   //baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
-  baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
+baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
 });
 
 // Interceptador para adicionar o Token automaticamente em toda requisição
@@ -289,8 +289,8 @@ export const financialApi = {
 
 export const visitorApi = {
   getByChurch: async (churchId: string) => {
-    // const response = await api.get<Visitor[]>(`/api/igrejas/${churchId}/visitantes`);
-    // return response.data;
+    const response = await api.get<Member[]>(`/api/igrejas/${churchId}/visitantes`);
+    return response.data;
     
     // MOCK TEMPORÁRIO PARA VOCÊ TESTAR VISUALMENTE
     return [
@@ -299,8 +299,11 @@ export const visitorApi = {
     ] as any[]; 
   },
 
-  create: async (churchId: string, visitor: Partial<any>) => {
-    const response = await api.post<any>(`/api/igrejas/${churchId}/visitantes`, visitor);
+  create: async (churchId: string, visitor: any) => {
+    const response = await api.post(`/api/public/visitantes`, {
+        ...visitor,
+        igrejaId: churchId
+    });
     return response.data;
   },
 

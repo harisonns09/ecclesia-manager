@@ -23,12 +23,11 @@ export interface Member {
   nome: string;
   email: string;
   telefone: string;
-  cpf?: string;
   
   // --- Novos Campos ---
   dataNascimento?: string;
-  genero?: 'M' | 'F';
-  estadoCivil?: string;
+  genero: string
+  estadoCivil: string;
   
   // Endereço
   cep?: string;
@@ -42,6 +41,7 @@ export interface Member {
   ministerio?: string;
   dataBatismo?: string;
   status: MemberStatus;
+  observacao?: string; // Campo extra para anotações diversas
 }
 export enum TransactionType {
   INCOME = 'Entrada',
