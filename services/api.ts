@@ -4,7 +4,6 @@ import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest,
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
   //baseURL: 'http://localhost:8080', 
-  //baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
   baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
 });
 
