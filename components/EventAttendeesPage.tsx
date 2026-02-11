@@ -71,7 +71,7 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
 
     // --- CÁLCULO DO TOTAL CONFIRMADO ---
     const totalRevenue = attendees.reduce((acc, att) => {
-        if (att.status === 'PAGO') {
+        if (att.status?.toLowerCase() === 'pago') {
             return acc + (Number(event?.preco) || 0);
         }
         return acc;

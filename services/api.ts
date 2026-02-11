@@ -5,7 +5,7 @@ const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
   //baseURL: 'http://localhost:8080', 
   //baseURL: 'https://gen-lang-client-0788356664.rj.r.appspot.com',
-baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
+  baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
 });
 
 // Interceptador para adicionar o Token automaticamente em toda requisição
@@ -90,6 +90,16 @@ export const memberApi = {
     const response = await api.post<Member>(`/api/igrejas/${churchId}/membros`, member);
     return response.data;
   },
+
+  createPublic: async (churchId: string, memberData: any) => {
+    // Importante: O Backend precisa ter a rota /api/public/membros liberada no SecurityConfig
+    const response = await api.post(`/api/public/${churchId}/membros`, {
+        ...memberData,
+        igrejaId: churchId
+    });
+    return response.data;
+  },
+
   update: async (churchId: string, memberId: string, member: Partial<Member>) => {
     const response = await api.put<Member>(`/api/igrejas/${churchId}/membros/${memberId}`, member);
     return response.data;

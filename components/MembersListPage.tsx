@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { User, Mail, Phone, Search, Plus, Trash2, Edit2, Calendar, Loader, AlertCircle } from 'lucide-react';
 import { Member } from '../types';
 import { memberApi } from '../services/api';
-import ConfirmationModal from './ConfirmationModal'; // Importe o Modal
+import ConfirmationModal from './ConfirmationModal';
+import { formatDate } from './utils/formatters';
 
 interface MembersListProps {
   churchId: string;
@@ -152,7 +153,7 @@ const MembersListPage: React.FC<MembersListProps> = ({ churchId }) => {
                                 {member.dataNascimento && (
                                     <div className="text-xs text-gray-400 flex items-center mt-0.5">
                                         <Calendar size={10} className="mr-1"/> 
-                                        {new Date(member.dataNascimento).toLocaleDateString('pt-BR')}
+                                        {formatDate(member.dataNascimento)}
                                     </div>
                                 )}
                             </div>

@@ -23,6 +23,7 @@ import VisitorRegistrationPage from './components/VisitorRegistrationPage'; // <
 
 import { Church, Transaction, Event } from './types';
 import { churchApi } from './services/api';
+import MemberRegistrationPublic from './components/MemberRegistrationPublic';
 
 function App() {
   const navigate = useNavigate();
@@ -158,7 +159,9 @@ function App() {
           !currentChurch ? <Navigate to="/" /> : (
              <VisitorRegistrationPage church={currentChurch} />
           )
-        } />
+      } />
+
+      <Route path="/cadastro-membro" element={<MemberRegistrationPublic church={currentChurch} />} />
 
       {/* LOGIN */}
       <Route path="/login" element={
