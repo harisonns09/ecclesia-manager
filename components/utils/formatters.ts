@@ -14,3 +14,18 @@ export const formatDate = (dateString: string | undefined) => {
   const [year, month, day] = dateString.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
 };
+
+export const formatPhoneNumber = (phone: string | undefined) => {
+    if (!phone) return '-';
+    // Remove tudo que não é dígito
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Formata (11) 99999-9999 ou (11) 9999-9999
+    const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
+    
+    if (match) {
+      return `(${match[1]}) ${match[2]}-${match[3]}`;
+    }
+    
+    return phone; // Retorna original se não bater com o padrão
+  };
