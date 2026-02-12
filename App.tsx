@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import AdminLayout from './layouts/AdminLayout';
 import Dashboard from './components/Dashboard';
 import MembersListPage from './components/MembersListPage';
@@ -19,14 +19,15 @@ import EventFormPage from './components/EventFormPage';
 import EventAttendeesPage from './components/EventAttendeesPage';
 import RegistrationStatusPage from './components/RegistrationStatusPage';
 import Visitors from './components/Visitors';
-import VisitorRegistrationPage from './components/VisitorRegistrationPage'; // <--- Importe aqui
+import VisitorRegistrationPage from './components/VisitorRegistrationPage'; 
+import MemberRegistrationPublic from './components/MemberRegistrationPublic';
 
 import { Church, Transaction, Event } from './types';
 import { churchApi } from './services/api';
-import MemberRegistrationPublic from './components/MemberRegistrationPublic';
 
 function App() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [currentChurch, setCurrentChurch] = useState<Church | null>(() => {
     const saved = localStorage.getItem('selectedChurch');
@@ -59,7 +60,13 @@ function App() {
   const handleLogin = (user: any) => {
     setIsAuthenticated(true);
     setCurrentUser(user);
-    navigate('/admin/dashboard');
+    
+    const state = location.state as { from?: Location };
+    if (state?.from?.pathname) {
+        navigate(state.from.pathname + state.from.search);
+    } else {
+        navigate('/admin/dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -72,6 +79,11 @@ function App() {
   const handleChurchSelect = (church: Church) => {
     setCurrentChurch(church);
     localStorage.setItem('selectedChurch', JSON.stringify(church));
+
+    const state = location.state as { from?: Location };
+    if (state?.from?.pathname) {
+        navigate(state.from.pathname + state.from.search);
+    }
   };
 
   const handleExitChurch = () => {
@@ -113,7 +125,7 @@ function App() {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
               <PublicHome
-                events={events} // Passando estado
+                events={events} 
                 church={currentChurch}
                 onNavigateToEvents={() => navigate('/eventos')}
                 onNavigateToRegistration={(event) => navigate(`/evento/${event.id}/inscricao`)}
@@ -126,7 +138,8 @@ function App() {
 
       {/* ROTA PÚBLICA DE EVENTOS */}
       <Route path="/eventos" element={
-        !currentChurch ? <Navigate to="/" /> : (
+        !currentChurch ? 
+          <Navigate to="/" replace state={{ from: location }} /> : (
           <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
             <Navbar
               isAuthenticated={isAuthenticated}
@@ -155,13 +168,21 @@ function App() {
         )
       } />
 
+      {/* VISITANTE PÚBLICO */}
       <Route path="/visitor" element={
-          !currentChurch ? <Navigate to="/" /> : (
+          !currentChurch ? 
+            <Navigate to="/" replace state={{ from: location }} /> : (
              <VisitorRegistrationPage church={currentChurch} />
           )
       } />
 
-      <Route path="/cadastro-membro" element={<MemberRegistrationPublic church={currentChurch} />} />
+      {/* CADASTRO DE MEMBRO PÚBLICO */}
+      <Route path="/cadastro" element={
+          !currentChurch ? 
+            <Navigate to="/" replace state={{ from: location }} /> : (
+             <MemberRegistrationPublic church={currentChurch} />
+          )
+      } />
 
       {/* LOGIN */}
       <Route path="/login" element={
@@ -170,28 +191,32 @@ function App() {
         )
       } />
 
-      {/* ROTAS PÚBLICAS DE INSCRIÇÃO */}
+      {/* ROTAS DE INSCRIÇÃO EM EVENTO */}
       <Route path="/evento/:id/inscricao" element={<EventRegistrationPage />} />
       <Route path="/minha-inscricao/:id" element={<RegistrationStatusPage />} />
 
-      {/* ÁREA ADMINISTRATIVA (PROTEGIDA) */}
+      {/* ÁREA ADMINISTRATIVA */}
       <Route path="/admin" element={
-        <AdminLayout
-          isAuthenticated={isAuthenticated}
-          currentChurch={currentChurch}
-          onLogout={handleLogout}
-          onExitChurch={handleExitChurch}
-          currentUser={currentUser}
-        />
+        !currentChurch ? (
+            <Navigate to="/" replace state={{ from: location }} />
+        ) : 
+        !isAuthenticated ? (
+            <Navigate to="/login" replace state={{ from: location }} />
+        ) : (
+          <AdminLayout
+            isAuthenticated={isAuthenticated}
+            currentChurch={currentChurch}
+            onLogout={handleLogout}
+            onExitChurch={handleExitChurch}
+            currentUser={currentUser}
+          />
+        )
       }>
         <Route path="dashboard" element={<Dashboard churchId={currentChurch?.id || ''} />} />
-        {/* Listagem (A rota principal /members agora aponta para a lista) */}
+        
         <Route path="members" element={<MembersListPage churchId={currentChurch?.id || ''} />} />
         
-        {/* Cadastro Novo */}
         <Route path="members/new" element={<MemberFormPage churchId={currentChurch?.id || ''} />} />
-        
-        {/* Edição (Usa o mesmo componente do form, mas captura o ID) */}
         <Route path="members/edit/:id" element={<MemberFormPage churchId={currentChurch?.id || ''} />} />
         <Route path="ministries" element={<Ministries churchId={currentChurch?.id || ''} />} />
         <Route path="small-groups" element={<SmallGroups churchId={currentChurch?.id || ''} />} />
