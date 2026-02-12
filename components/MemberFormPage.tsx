@@ -305,6 +305,10 @@ const MemberFormPage: React.FC<MemberFormProps> = ({ churchId }) => {
                       <input className="input-field" value={formData.numero} onChange={e => setFormData({...formData, numero: e.target.value})} />
                   </div>
                   <div>
+                      <label className="label-field">Complemento</label>
+                      <input className="input-field" value={formData.complemento} onChange={e => setFormData({...formData, complemento: e.target.value})} />
+                  </div>
+                  <div>
                       <label className="label-field">Bairro</label>
                       <input className="input-field" value={formData.bairro} onChange={e => setFormData({...formData, bairro: e.target.value})} />
                   </div>

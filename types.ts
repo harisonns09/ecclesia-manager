@@ -36,6 +36,7 @@ export interface Member {
   bairro?: string;
   cidade?: string;
   estado?: string;
+  complemento?: string;
 
   // Eclesiástico
   ministerio?: string;
