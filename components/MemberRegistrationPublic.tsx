@@ -270,7 +270,7 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
                 </div>
             </div>
 
-            {/* SEÇÃO 3: ECLESIÁSTICO */}
+            {/* SEÇÃO 3: ECLESIÁSTICO 
             <div className="border-t border-gray-100 pt-6">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                     <ChurchIcon size={14} className="mr-2" /> Vida Eclesiástica
@@ -287,7 +287,7 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
                         />
                     </div>
                 </div>
-            </div>
+            </div>*/}
 
             <button 
                 type="submit" 
