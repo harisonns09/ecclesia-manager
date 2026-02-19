@@ -1,57 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, UserPlus, Loader, Users, Search, X, ArrowRight, DollarSign } from 'lucide-react';
+import { Calendar, Clock, MapPin, Plus, Trash2, Edit2, Loader, Users, Search, X, ArrowRight, DollarSign, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Event } from '../types'; 
 import { eventApi } from '../services/api';
+import { useApp } from '../contexts/AppContext'; 
+import { toast } from 'sonner';
 
 interface EventsProps {
-  events: Event[]; 
-  setEvents: React.Dispatch<React.SetStateAction<Event[]>>; 
+  events?: Event[]; 
+  setEvents?: React.Dispatch<React.SetStateAction<Event[]>>; 
   isAdmin: boolean;
-  churchId: string;
   onRegisterClick?: (event: Event) => void;
 }
 
-const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) => {
+const Events: React.FC<EventsProps> = ({ 
+    isAdmin, 
+    onRegisterClick,
+    events: propEvents,
+    setEvents: propSetEvents
+}) => {
   const navigate = useNavigate();
-  const [localEvents, setLocalEvents] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { currentChurch: church } = useApp();
 
+  const [internalEvents, setInternalEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchId, setSearchId] = useState('');
 
+  // Se propEvents for passado, usa ele. Se não, usa internalEvents.
+  // Importante: Verificamos se propEvents é undefined, pois um array vazio [] é um valor válido.
+  const isUsingProps = propEvents !== undefined;
+  const displayEvents = isUsingProps ? propEvents : internalEvents;
+
   useEffect(() => {
-    if (churchId) {
+    // Só carrega internamente se NÃO estiver usando props e tiver uma igreja selecionada
+    if (!isUsingProps && church?.id) {
       loadEvents();
     }
-  }, [churchId]);
+  }, [church?.id, isUsingProps]);
 
   const loadEvents = async () => {
+    if (!church) return;
     setIsLoading(true);
     try {
-      const data = await eventApi.getByChurch(churchId);
+      const data = await eventApi.getByChurch(church.id);
+      
       const sorted = data.sort((a: any, b: any) => 
         new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime()
       );
-      setLocalEvents(sorted);
+      
+      setInternalEvents(sorted);
+      
+      // Se a função de setEvents do pai foi passada (mesmo sem o array de events), atualizamos ela também
+      if (propSetEvents) propSetEvents(sorted);
+      
     } catch (err) {
       console.error("Erro ao carregar eventos:", err);
+      toast.error("Não foi possível carregar a agenda.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (!churchId) return;
-    if (confirm('Tem certeza que deseja excluir permanentemente este evento?')) {
+    if (!church) return;
+    if (window.confirm('Tem certeza que deseja excluir permanentemente este evento?')) {
+        const toastId = toast.loading("Excluindo evento...");
       try {
-        setIsLoading(true);
-        await eventApi.delete(churchId, id);
-        setLocalEvents(prev => prev.filter(e => String(e.id) !== id));
+        await eventApi.delete(church.id, id);
+        
+        // Atualiza localmente
+        const newEvents = displayEvents.filter(e => String(e.id) !== id);
+        setInternalEvents(newEvents);
+        
+        // Atualiza pai se necessário
+        if (propSetEvents) propSetEvents(newEvents);
+
+        toast.success("Evento excluído.", { id: toastId });
       } catch (err) {
-        alert("Erro ao excluir evento.");
-      } finally {
-        setIsLoading(false);
+        toast.error("Erro ao excluir evento.", { id: toastId });
       }
     }
   };
@@ -64,6 +91,8 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
         setSearchId('');
     }
   };
+
+  if (!church) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
@@ -78,7 +107,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                     </button>
                 </div>
                 <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-                    Digite o número da sua inscrição (recebido por e-mail ou na tela de confirmação) para verificar o status e acessar o pagamento.
+                    Digite o número da sua inscrição para verificar o status.
                 </p>
                 <form onSubmit={handleSearchRegistration} className="flex gap-3">
                     <input 
@@ -106,7 +135,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
         </div>
         
         <div className="flex gap-3">
-            {isAdmin && (
+            {isAdmin ? (
             <button 
                 onClick={() => navigate('/admin/events/new')}
                 className="btn-primary shadow-md"
@@ -114,9 +143,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                 <Plus size={18} />
                 Novo Evento
             </button>
-            )}
-
-            {!isAdmin && (
+            ) : (
                 <button 
                     onClick={() => setIsSearchModalOpen(true)}
                     className="btn-secondary shadow-sm hover:shadow-md"
@@ -128,9 +155,9 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
         </div>
       </div>
 
-      {isLoading && localEvents.length === 0 ? (
+      {isLoading ? (
         <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>
-      ) : localEvents.length === 0 ? (
+      ) : displayEvents.length === 0 ? (
         <div className="bg-gray-50 p-16 rounded-2xl border border-dashed border-gray-300 text-center">
           <Calendar className="mx-auto text-gray-300 mb-4 opacity-50" size={48} />
           <h3 className="text-xl font-bold text-gray-800">Nenhum evento agendado</h3>
@@ -139,7 +166,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
         </div>
       ) : (
         <div className="grid gap-6">
-          {localEvents.map((event: any) => (
+          {displayEvents.map((event: any) => (
             <div key={event.id} className="premium-card p-0 flex flex-col md:flex-row overflow-hidden group hover:border-blue-300">
               
               <div className="bg-[#eff6ff] md:w-32 flex flex-col items-center justify-center p-6 text-center border-b md:border-b-0 md:border-r border-blue-100 group-hover:bg-blue-50 transition-colors">
@@ -161,7 +188,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                         {event.ministerioResponsavel}
                       </span>
                   )}
-                  
                   {event.preco > 0 ? (
                     <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-md text-xs font-bold border border-emerald-100 flex items-center">
                       <DollarSign size={12} className="mr-0.5" />
@@ -197,7 +223,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                     >
                       <Users size={20} />
                     </button>
-
                     <button 
                         onClick={() => navigate(`/admin/events/edit/${event.id}`)}
                         className="p-2.5 text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-[#1e3a8a] hover:border-blue-300 transition-all"
@@ -205,7 +230,6 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
                     >
                       <Edit2 size={20} />
                     </button>
-                    
                     <button 
                         onClick={() => handleDeleteEvent(String(event.id))} 
                         className="p-2.5 text-red-600 bg-white border border-gray-300 rounded-lg hover:bg-red-50 hover:border-red-200 transition-all"
@@ -223,7 +247,7 @@ const Events: React.FC<EventsProps> = ({ isAdmin, churchId, onRegisterClick }) =
             </div>
           ))}
         </div>
-        )}     
+      )}     
     </div>
   );
 };

@@ -1,27 +1,24 @@
-import React from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Outlet, Navigate, useLocation } from 'react-router-dom'; // Adicionado useLocation
 import Sidebar from '../components/Sidebar';
 import Navbar from '../components/Navbar';
-import { Church } from '../types';
+import { useApp } from '../contexts/AppContext'; // Importe o Contexto
 
-interface AdminLayoutProps {
-  isAuthenticated: boolean;
-  currentChurch: Church | null;
-  onLogout: () => void;
-  onExitChurch: () => void;
-  currentUser: any;
-}
+// Nenhuma prop é necessária agora, o Layout é autossuficiente
+const AdminLayout: React.FC = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const location = useLocation(); // Hook correto para pegar a rota atual
+  
+  // Consumindo do Contexto Global
+  const { 
+    isAuthenticated, 
+    currentChurch, 
+    logout, 
+    exitChurch,
+    currentUser 
+  } = useApp();
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ 
-  isAuthenticated, 
-  currentChurch, 
-  onLogout, 
-  onExitChurch,
-  currentUser
-}) => {
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-
-  // Proteção de Rota
+  // Proteção de Rota (Embora o App.tsx já faça, é bom manter como dupla segurança ou remover se redundante)
   if (!currentChurch) return <Navigate to="/" replace />;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
 
@@ -32,22 +29,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
       <Sidebar 
         isOpen={isSidebarOpen} 
         setIsOpen={setIsSidebarOpen} 
-        onLogout={onLogout} 
-        currentUser={currentUser}
-        onExitChurch={onExitChurch}
-        activeTab={window.location.pathname}
+        // Não precisa passar props de user/logout, a Sidebar já usa o contexto internamente
+        // Mas se sua Sidebar AINDA espera props (versão antiga), você teria que passar aqui.
+        // Assumindo que você usou a Sidebar corrigida que enviei anteriormente:
       />
 
       {/* Conteúdo Principal */}
       <div className="flex-1 flex flex-col overflow-hidden w-full relative">
         <Navbar 
-          isAuthenticated={isAuthenticated} 
-          onLoginClick={() => {}} 
-          activeTab={window.location.pathname}
+          // Navbar também já consome contexto, só passamos props de controle de UI
+          activeTab={location.pathname} // Usando location.pathname do hook
           setActiveTab={() => {}}
-          onLogout={onLogout}
-          churchName={currentChurch.name}
-          onChangeChurch={onExitChurch} 
           onSidebarToggle={() => setIsSidebarOpen(!isSidebarOpen)} 
         />
 

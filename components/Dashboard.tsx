@@ -1,43 +1,54 @@
 import React, { useEffect, useState } from 'react';
-import { Users, Calendar, Gift, Loader, MapPin, Clock, RefreshCw } from 'lucide-react';
+import { Users, Calendar, Gift, Loader, MapPin, Clock, RefreshCw, PartyPopper } from 'lucide-react';
 import { Member, Event } from '../types';
 import { memberApi, eventApi } from '../services/api';
+import { useApp } from '../contexts/AppContext';
+import { toast } from 'sonner';
 
-interface DashboardProps {
-  churchId: string;
-}
+const Dashboard: React.FC = () => {
+  const { currentChurch: church } = useApp();
 
-const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
 
   useEffect(() => {
-    if (churchId) {
+    if (church) {
       loadDashboardData();
     }
-  }, [churchId]);
+  }, [church]);
 
   const loadDashboardData = async () => {
+    if (!church) return;
+    
     setIsLoading(true);
     try {
       const [membersResult, eventsResult] = await Promise.allSettled([
-        memberApi.getByChurch(churchId),
-        eventApi.getByChurch(churchId)
+        memberApi.getByChurch(church.id),
+        eventApi.getByChurch(church.id)
       ]);
 
       if (membersResult.status === 'fulfilled') {
         setMembers(membersResult.value);
+      } else {
+          console.error("Erro ao carregar membros", membersResult.reason);
       }
+
       if (eventsResult.status === 'fulfilled') {
         setEvents(eventsResult.value);
+      } else {
+          console.error("Erro ao carregar eventos", eventsResult.reason);
       }
+      
     } catch (error) {
       console.error("Erro geral no dashboard:", error);
+      toast.error("Erro ao carregar dados do painel.");
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!church) return null;
 
   const activeMembers = members.length;
   
@@ -46,7 +57,10 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
     .sort((a, b) => new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime())
     .slice(0, 5);
 
-  const currentMonth = new Date().getMonth();
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentDay = today.getDate();
+
   const birthdaysThisMonth = members.filter(m => {
     if (!m.dataNascimento) return false;
     const dateStr = m.dataNascimento.includes('T') ? m.dataNascimento : `${m.dataNascimento}T00:00:00`;
@@ -55,11 +69,17 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
   }).sort((a, b) => {
       const dateA = a.dataNascimento!.includes('T') ? a.dataNascimento! : `${a.dataNascimento}T00:00:00`;
       const dateB = b.dataNascimento!.includes('T') ? b.dataNascimento! : `${b.dataNascimento}T00:00:00`;
-      const dayA = new Date(dateA).getDate();
-      const dayB = new Date(dateB).getDate();
-      return dayA - dayB;
+      return new Date(dateA).getDate() - new Date(dateB).getDate();
   });
 
+  const birthdaysToday = members.filter(m => {
+    if (!m.dataNascimento) return false;
+    const dateStr = m.dataNascimento.includes('T') ? m.dataNascimento : `${m.dataNascimento}T00:00:00`;
+    const d = new Date(dateStr);
+    return d.getMonth() === currentMonth && d.getDate() === currentDay;
+  });
+
+  // --- COMPONENTE INTERNO ---
   const StatCard = ({ title, value, icon, colorClass, subtext }: any) => {
     const colors = {
         blue: { bg: 'bg-[#eff6ff]', text: 'text-[#1e3a8a]', iconBg: 'bg-[#dbeafe]' },
@@ -175,7 +195,7 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
           </div>
         </div>
 
-        <div className="premium-card p-0 flex flex-col h-full max-h-[600px]">
+        <div className="premium-card p-0 flex flex-col h-full max-h-[700px]">
           <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-pink-50/50 to-white flex items-center justify-between">
               <h3 className="font-bold text-gray-800 flex items-center">
                 <Gift size={20} className="mr-2 text-pink-500" />
@@ -187,16 +207,44 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
           </div>
           
           <div className="p-4 flex-1 overflow-y-auto custom-scrollbar">
+            
+            {birthdaysToday.length > 0 && (
+                <div className="mb-6 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-2xl p-4 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                        <PartyPopper size={64} className="text-orange-500"/>
+                    </div>
+                    <h4 className="text-sm font-bold text-orange-700 flex items-center mb-3 relative z-10">
+                        <PartyPopper size={16} className="mr-2 animate-bounce" />
+                        Hoje é dia de festa! 🎉
+                    </h4>
+                    <div className="space-y-2 relative z-10">
+                        {birthdaysToday.map(m => (
+                            <div key={m.id} className="flex items-center bg-white/80 p-2 rounded-xl backdrop-blur-sm shadow-sm">
+                                <div className="w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-xs mr-2 border border-orange-200">
+                                    {m.nome.charAt(0)}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-gray-800 truncate">{m.nome}</p>
+                                    <p className="text-[10px] text-gray-500">Parabéns!</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 pl-1">Próximos do Mês</h4>
             {birthdaysThisMonth.length > 0 ? (
               <div className="space-y-3">
                 {birthdaysThisMonth.map(m => {
                    const dateStr = m.dataNascimento ? (m.dataNascimento.includes('T') ? m.dataNascimento : `${m.dataNascimento}T00:00:00`) : new Date().toISOString();
                    const day = new Date(dateStr).getDate();
+                   const isToday = day === currentDay;
                    
                    return (
-                    <div key={m.id} className="flex items-center justify-between p-3 hover:bg-pink-50/50 rounded-xl transition-colors border border-transparent hover:border-pink-100 group">
+                    <div key={m.id} className={`flex items-center justify-between p-3 rounded-xl transition-colors border group ${isToday ? 'bg-yellow-50 border-yellow-200' : 'hover:bg-pink-50/50 border-transparent hover:border-pink-100'}`}>
                       <div className="flex items-center min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-100 to-pink-200 text-pink-700 flex items-center justify-center mr-3 font-bold text-sm shrink-0 border-2 border-white shadow-sm">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 font-bold text-sm shrink-0 border-2 border-white shadow-sm ${isToday ? 'bg-yellow-200 text-yellow-800' : 'bg-gradient-to-br from-pink-100 to-pink-200 text-pink-700'}`}>
                           {m.nome.charAt(0)}
                         </div>
                         <div className="min-w-0">
@@ -204,7 +252,7 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
                           <p className="text-xs text-gray-500 truncate">{m.ministerio || 'Membro'}</p>
                         </div>
                       </div>
-                      <div className="text-xs font-bold text-pink-600 bg-white px-3 py-1.5 rounded-lg border border-pink-100 shadow-sm shrink-0">
+                      <div className={`text-xs font-bold px-3 py-1.5 rounded-lg border shadow-sm shrink-0 ${isToday ? 'bg-yellow-400 text-white border-yellow-500' : 'text-pink-600 bg-white border-pink-100'}`}>
                         Dia {day}
                       </div>
                     </div>
@@ -212,11 +260,11 @@ const Dashboard: React.FC<DashboardProps> = ({ churchId }) => {
                 })}
               </div>
             ) : (
-              <div className="h-full flex flex-col items-center justify-center text-gray-400 py-12">
+              <div className="h-40 flex flex-col items-center justify-center text-gray-400">
                 <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
                     <Gift size={32} className="opacity-30 text-pink-400" />
                 </div>
-                <p className="text-sm font-medium">Sem festas este mês.</p>
+                <p className="text-sm font-medium">Sem mais aniversários este mês.</p>
               </div>
             )}
           </div>

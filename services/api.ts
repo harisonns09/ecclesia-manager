@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse } from '../types';
+import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
 
 const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
@@ -21,23 +21,23 @@ api.interceptors.response.use(
   (error) => {
     // Verifica se o erro é 401 (Não autorizado) ou 403 (Proibido)
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-      
+
       // Evita loop infinito se o erro for na própria rota de login
       if (!window.location.pathname.includes('/login')) {
-          console.warn('Sessão expirada. Redirecionando para login...');
-          
-          // Remove o token inválido
-          localStorage.removeItem('church_token');
-          
-          // Força o redirecionamento para a tela de login
-          // Usamos window.location.href para garantir um refresh limpo do estado
-          window.location.href = '/login';
+        console.warn('Sessão expirada. Redirecionando para login...');
+
+        // Remove o token inválido
+        localStorage.removeItem('church_token');
+
+        // Força o redirecionamento para a tela de login
+        // Usamos window.location.href para garantir um refresh limpo do estado
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
   }
 );
- 
+
 export default api;
 
 // ===== AUTHENTICATION ENDPOINTS =====
@@ -77,6 +77,21 @@ export const churchApi = {
 
 // ===== MEMBER ENDPOINTS =====
 export const memberApi = {
+  // Nova função paginada
+  // No seu memberApi dentro de services/api.ts
+  getByChurchPaged: async (churchId: string, params: any) => {
+    const response = await api.get(`/api/igrejas/${churchId}/membros/paginado`, {
+      params: {
+        page: params.page,
+        size: params.size,
+        nome: params.searchTerm,
+        mesAniversario: params.month,
+        genero: params.gender,
+      }
+    });
+    return response.data; // Retorna Page<Member>
+  },
+
   getByChurch: async (churchId: string) => {
     const response = await api.get<Member[]>(`/api/igrejas/${churchId}/membros`);
     return response.data;
@@ -93,8 +108,8 @@ export const memberApi = {
   createPublic: async (churchId: string, memberData: any) => {
     // Importante: O Backend precisa ter a rota /api/public/membros liberada no SecurityConfig
     const response = await api.post(`/api/public/${churchId}/membros`, {
-        ...memberData,
-        igrejaId: churchId
+      ...memberData,
+      igrejaId: churchId
     });
     return response.data;
   },
@@ -143,8 +158,8 @@ export const eventApi = {
   },
   create: async (churchId: string, event: Partial<Event>) => {
     const payload = {
-        ...event,
-        igrejaId: Number(churchId)
+      ...event,
+      igrejaId: Number(churchId)
     };
     const response = await api.post<Event>(`/api/igrejas/${churchId}/eventos`, payload);
     return response.data;
@@ -156,10 +171,10 @@ export const eventApi = {
   delete: async (churchId: string, eventId: string) => {
     await api.delete(`/api/igrejas/${churchId}/eventos/${eventId}`);
   },
-  
+
   register: async (eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string }) => {
-     const response = await api.post(`/api/eventos/${eventId}/inscricao`, data);
-     return response.data;
+    const response = await api.post(`/api/eventos/${eventId}/inscricao`, data);
+    return response.data;
   },
 
   // Solicita ao Backend que crie um link de checkout na InfinitePay
@@ -170,13 +185,13 @@ export const eventApi = {
   },
 
   updatePaymentMethod: async (churchId: string, eventId: string, registrationId: string, method: 'ONLINE' | 'DINHEIRO') => {
-    const response = await api.put(`/api/igrejas/${churchId}/eventos/${eventId}/inscricoes/${registrationId}/pagamento`, { 
-        formaPagamento: method 
+    const response = await api.put(`/api/igrejas/${churchId}/eventos/${eventId}/inscricoes/${registrationId}/pagamento`, {
+      formaPagamento: method
     });
     return response.data;
   },
 
-  confirmPayment: async ( eventId: string, registrationId: string) => {
+  confirmPayment: async (eventId: string, registrationId: string) => {
     await api.put(`/api/inscricoes/confirmarPagamento/${eventId}/${registrationId}`);
   },
 };
@@ -300,18 +315,18 @@ export const visitorApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Member[]>(`/api/igrejas/${churchId}/visitantes`);
     return response.data;
-    
+
     // MOCK TEMPORÁRIO PARA VOCÊ TESTAR VISUALMENTE
     return [
       { id: '1', churchId, name: 'Carlos Eduardo', phone: '(11) 99999-9999', visitDate: '2023-10-25', status: 'Visitante', observation: 'Veio convidado pelo Pedro.' },
       { id: '2', churchId, name: 'Ana Clara', phone: '(11) 98888-8888', visitDate: '2023-10-20', status: 'Em Acompanhamento', observation: 'Gostou muito do louvor.' },
-    ] as any[]; 
+    ] as any[];
   },
 
   create: async (churchId: string, visitor: any) => {
     const response = await api.post(`/api/public/visitantes`, {
-        ...visitor,
-        igrejaId: churchId
+      ...visitor,
+      igrejaId: churchId
     });
     return response.data;
   },
@@ -325,3 +340,23 @@ export const visitorApi = {
     await api.delete(`/api/igrejas/${churchId}/visitantes/${visitorId}`);
   }
 };
+
+export const kidsApi = {
+  // Realizar Check-in
+  checkIn: async (churchId: string, data: CheckInKidsRequest) => {
+    const response = await api.post(`/api/igrejas/${churchId}/kids/checkin`, data);
+    return response.data;
+  },
+
+  // Listar Crianças na Sala (Para o Dashboard)
+  listActive: async (churchId: string) => {
+    const response = await api.get(`/api/igrejas/${churchId}/kids/ativos`);
+    return response.data as CheckInKids[];
+  },
+
+  // Realizar Check-out (Saída)
+  checkOut: async (churchId: string, checkInId: number) => {
+    await api.post(`/api/igrejas/${churchId}/kids/checkout/${checkInId}`);
+  }
+};
+

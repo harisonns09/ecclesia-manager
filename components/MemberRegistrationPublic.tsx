@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Mail, Phone, MapPin, Church as ChurchIcon, Save, ArrowLeft, Loader, CheckCircle, Star } from 'lucide-react';
-import { memberApi } from '../services/api'; // Certifique-se que publicApi existe no api.ts
-import { Church, Member, MemberStatus } from '../types';
+import { User, Mail, Phone, MapPin, Save, ArrowLeft, Loader, CheckCircle, Star } from 'lucide-react';
+import { memberApi } from '../services/api';
+import { Member, MemberStatus } from '../types';
 import ConfirmationModal from './ConfirmationModal';
+import { useApp } from '../contexts/AppContext'; // Importe o Contexto
+import { toast } from 'sonner'; // Importe o Toast
 
-interface MemberRegistrationPublicProps {
-  church: Church | null; // Recebe o objeto church
-}
-
-const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ church }) => {
+// Não precisa mais receber props
+const MemberRegistrationPublic: React.FC = () => {
   const navigate = useNavigate();
+  
+  // Consumindo a igreja do contexto (renomeando para church para manter compatibilidade com código existente)
+  const { currentChurch: church } = useApp();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
@@ -27,6 +30,7 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
     dataBatismo: ''
   });
 
+  // Atualiza o ID da igreja se o contexto carregar depois
   useEffect(() => {
     if (church) {
       setFormData(prev => ({ ...prev, igrejaId: church.id }));
@@ -83,15 +87,25 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
             cidade: data.localidade,
             estado: data.uf
           }));
+          toast.success("Endereço encontrado!");
+        } else {
+            toast.error("CEP não encontrado.");
         }
-      } catch (error) { console.error("Erro CEP", error); }
-      finally { setLoadingCep(false); }
+      } catch (error) { 
+          console.error("Erro CEP", error);
+          toast.error("Erro ao buscar CEP."); 
+      } finally { 
+          setLoadingCep(false); 
+      }
     }
   };
 
   const handlePreSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!church) return;
+    if (!church) {
+        toast.error("Nenhuma igreja selecionada.");
+        return;
+    }
 
     const newErrors: { [key: string]: string } = {};
     const birthErr = validateDate(formData.dataNascimento);
@@ -99,6 +113,7 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      toast.error("Verifique os erros no formulário.");
       return;
     }
     setIsModalOpen(true);
@@ -107,6 +122,10 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
   const handleConfirmSave = async () => {
     if (!church) return;
     setIsSubmitting(true);
+    
+    // Toast de loading
+    const toastId = toast.loading('Enviando seu cadastro...');
+
     try {
       const payload = {
         ...formData,
@@ -114,20 +133,28 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
         telefone: formData.telefone.replace(/\D/g, ''),
       };
 
-      // Usa a API PÚBLICA que criamos anteriormente
       await memberApi.createPublic(church.id, payload);
+      
+      toast.success('Cadastro realizado com sucesso!', {
+        id: toastId, // Atualiza o toast de loading
+        description: `Seus dados foram enviados para ${church.name}.`
+      });
+
       setIsSuccess(true);
       setIsModalOpen(false);
     } catch (error) {
       console.error(error);
-      alert("Erro ao enviar cadastro. Verifique os dados.");
+      toast.error("Erro ao enviar cadastro", {
+        id: toastId,
+        description: "Verifique sua conexão ou tente novamente."
+      });
       setIsModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!church) return <div className="p-8 text-center">Selecione uma igreja primeiro.</div>;
+  if (!church) return <div className="p-8 text-center text-gray-500">Carregando dados da igreja...</div>;
 
   if (isSuccess) {
     return (
@@ -140,7 +167,7 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
           <p className="text-gray-600 mb-8">
             Seus dados foram enviados para a secretaria da <strong>{church.name}</strong>.
           </p>
-          <button onClick={() => navigate('/')} className="w-full py-3 bg-[#1e3a8a] text-white rounded-xl font-bold shadow-lg">
+          <button onClick={() => navigate('/')} className="w-full py-3 bg-[#1e3a8a] text-white rounded-xl font-bold shadow-lg hover:bg-[#172554] transition-colors">
             Voltar ao Início
           </button>
         </div>
@@ -253,8 +280,8 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
                   </div>
 
                   <div>
-                    <label className="label-field">Complemento</label>
-                    <input className="input-field" value={formData.complemento} onChange={e => setFormData({ ...formData, complemento: e.target.value })} />
+                    <label className="label-field block text-sm font-bold text-gray-700 mb-1 ml-1">Complemento</label>
+                    <input className="input-field w-full p-3 bg-gray-50 rounded-lg border-none focus:ring-2 focus:ring-blue-100" value={formData.complemento || ''} onChange={e => setFormData({ ...formData, complemento: e.target.value })} />
                   </div>
                 </div>
                 <div>
@@ -275,25 +302,6 @@ const MemberRegistrationPublic: React.FC<MemberRegistrationPublicProps> = ({ chu
                 </div>
               </div>
             </div>
-
-            {/* SEÇÃO 3: ECLESIÁSTICO 
-            <div className="border-t border-gray-100 pt-6">
-                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
-                    <ChurchIcon size={14} className="mr-2" /> Vida Eclesiástica
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                        <label className="label-field block text-sm font-bold text-gray-700 mb-1 ml-1">Data de Batismo (Se houver)</label>
-                        <input 
-                            type="date" 
-                            max={new Date().toISOString().split("T")[0]}
-                            className="input-field w-full p-3 bg-gray-50 rounded-lg border-none focus:ring-2 focus:ring-blue-100"
-                            value={formData.dataBatismo} 
-                            onChange={handleDateChange('dataBatismo')} 
-                        />
-                    </div>
-                </div>
-            </div>*/}
 
             <button
               type="submit"

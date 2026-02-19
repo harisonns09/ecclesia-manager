@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, CheckCircle, CreditCard, Loader, ArrowLeft, Ex
 import { eventApi } from '../services/api';
 import { Event } from '../types';
 import ConfirmationModal from './ConfirmationModal';
+import { toast } from 'sonner';
 
 const EventRegistrationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -29,12 +30,17 @@ const EventRegistrationPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (id) loadEvent(id);
-    else { setError("Evento não identificado."); setIsLoading(false); }
+    if (id) {
+        loadEvent(id);
+    } else { 
+        setError("Evento não identificado."); 
+        setIsLoading(false); 
+    }
 
     if (paymentStatus === 'success') {
       setFinalPaymentMethod('ONLINE');
       setStep('success');
+      toast.success("Pagamento confirmado com sucesso!");
     }
   }, [id, paymentStatus]);
 
@@ -45,7 +51,7 @@ const EventRegistrationPage: React.FC = () => {
       setEvent(data);
     } catch (err) {
       console.error(err);
-      setError("Evento indisponível.");
+      setError("Evento indisponível ou não encontrado.");
     } finally {
       setIsLoading(false);
     }
@@ -55,24 +61,30 @@ const EventRegistrationPage: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.lgpdConsent) return;
+    if (!formData.lgpdConsent) {
+        toast.error("Você precisa aceitar os termos de uso.");
+        return;
+    }
     if (!event || !id) return;
 
     setIsProcessing(true);
+    const toastId = toast.loading("Realizando inscrição...");
 
     try {
       const response = await eventApi.register(id, { ...formData });
       const regId = response.numeroInscricao;
       setRegistrationId(regId);
 
+      toast.success("Pré-inscrição realizada!", { id: toastId });
+
       if (isPaidEvent) {
         setStep('payment_selection');
       } else {
         setStep('success');
       }
-    } catch (err) {
-      const mensagemDoBackend = (err as any)?.response?.data?.message || "Erro desconhecido";
-      alert(mensagemDoBackend);
+    } catch (err: any) {
+      const mensagemDoBackend = err?.response?.data?.message || "Erro ao realizar inscrição. Tente novamente.";
+      toast.error(mensagemDoBackend, { id: toastId });
     } finally {
       setIsProcessing(false);
     }
@@ -86,6 +98,8 @@ const EventRegistrationPage: React.FC = () => {
   const handleConfirmAction = async () => {
     if (!event || !id || !registrationId || !modalType) return;
     setIsConfirmingPayment(true);
+    
+    const toastId = modalType === 'CASH' ? toast.loading("Confirmando opção...") : null;
 
     try {
       if (modalType === 'ONLINE') {
@@ -100,13 +114,16 @@ const EventRegistrationPage: React.FC = () => {
         if (response.checkoutUrl) {
           window.location.href = response.checkoutUrl;
         } else {
-          alert("Erro ao gerar link de pagamento.");
+          toast.error("Erro ao gerar link de pagamento.");
           setIsConfirmingPayment(false);
           setModalOpen(false);
         }
       } else {
         await eventApi.updatePaymentMethod("public", id, registrationId, 'DINHEIRO');
         setFinalPaymentMethod('CASH');
+        
+        if (toastId) toast.success("Opção confirmada!", { id: toastId });
+        
         setTimeout(() => {
           setModalOpen(false);
           setStep('success');
@@ -115,16 +132,31 @@ const EventRegistrationPage: React.FC = () => {
       }
     } catch (err) {
       console.error(err);
-      alert("Ocorreu um erro ao processar sua solicitação.");
+      if (toastId) toast.error("Ocorreu um erro ao processar sua solicitação.", { id: toastId });
+      else toast.error("Erro ao processar.");
+      
       setIsConfirmingPayment(false);
       setModalOpen(false);
     }
   };
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>;
-  if (error || !event) return <div className="p-8 text-center"><h2 className="text-xl font-bold">Erro</h2><p>{error}</p></div>;
+  
+  if (error || !event) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+        <div className="bg-white p-8 rounded-2xl shadow-xl text-center max-w-md w-full">
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="text-red-500" size={32} />
+            </div>
+            <h2 className="text-xl font-bold text-gray-800 mb-2">Ops! Algo deu errado.</h2>
+            <p className="text-gray-500 mb-6">{error}</p>
+            <button onClick={() => navigate('/')} className="btn-secondary w-full justify-center">
+                Voltar ao Início
+            </button>
+        </div>
+    </div>
+  );
 
-  // --- TELA 2: ESCOLHA DE PAGAMENTO ---
   if (step === 'payment_selection') {
     return (
       <div className="max-w-2xl mx-auto py-12 px-4 animate-in slide-in-from-right relative">
@@ -181,9 +213,9 @@ const EventRegistrationPage: React.FC = () => {
                 <ExternalLink size={20} className="text-emerald-600" />
               </button>
 
-              <div className="flex items-center justify-center text-gray-400 text-sm py-2">
-                <span className="bg-white px-2 z-10">ou</span>
-                <div className="absolute w-full h-px bg-gray-100 -z-0"></div>
+              <div className="flex items-center justify-center text-gray-400 text-sm py-2 relative">
+                <span className="bg-white px-2 z-10 relative">ou</span>
+                <div className="absolute w-full h-px bg-gray-100 top-1/2 left-0 -z-0"></div>
               </div>
 
               {/* Botão Dinheiro */}
@@ -213,7 +245,6 @@ const EventRegistrationPage: React.FC = () => {
     );
   }
 
-  // --- TELA 3: SUCESSO FINAL ---
   if (step === 'success') {
     const isCash = isPaidEvent && finalPaymentMethod === 'CASH';
 
@@ -264,7 +295,6 @@ const EventRegistrationPage: React.FC = () => {
     );
   }
 
-  // --- TELA 1: FORMULÁRIO ---
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 animate-in fade-in">
       <button onClick={() => navigate('/')} className="flex items-center text-gray-500 mb-6 hover:text-[#1e3a8a] transition-colors font-medium">

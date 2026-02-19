@@ -3,10 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare, DollarSign } from 'lucide-react';
 import { eventApi } from '../services/api';
 import ConfirmationModal from './ConfirmationModal';
+import { useApp } from '../contexts/AppContext'; // Importe o Contexto
+import { toast } from 'sonner'; // Importe o Toast
 
-const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
+// Sem props!
+const EventAttendeesPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const { currentChurch: church } = useApp(); // Pegando a igreja do contexto
 
     const [event, setEvent] = useState<any>(null);
     const [attendees, setAttendees] = useState<any[]>([]);
@@ -19,21 +23,25 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
     const [isProcessing, setIsProcessing] = useState(false);
 
     useEffect(() => {
-        if (churchId && id) {
+        if (church && id) {
             loadEventAndAttendees(id);
         }
-    }, [churchId, id]);
+    }, [church, id]);
 
     const loadEventAndAttendees = async (eventId: string) => {
+        if (!church) return;
         setIsLoading(true);
         try {
-            const data = await eventApi.getById("public", eventId);
+            // Nota: eventApi.getById pode precisar do churchId dependendo da implementação do seu backend
+            // Se for rota pública, ok. Se for admin, talvez precise passar church.id
+            const data = await eventApi.getById("public", eventId); 
             if (data) {
                 setEvent(data);
                 setAttendees(data.inscricoes || []);
             }
         } catch (error) {
             console.error("Erro ao carregar inscritos:", error);
+            toast.error("Erro ao carregar lista de inscritos.");
         } finally {
             setIsLoading(false);
         }
@@ -47,7 +55,6 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
             return nome.includes(search) || email.includes(search);
         })
         .sort((a, b) => {
-            // Mapa de pesos para ordenação (Menor número = aparece primeiro)
             const statusWeight: Record<string, number> = {
                 'PENDENTE': 1,
                 'PAGO': 2,
@@ -60,16 +67,12 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
             const weightA = statusWeight[statusA] || 99;
             const weightB = statusWeight[statusB] || 99;
 
-            // 1. Ordena por Status (Pendente > Pago > Cancelado)
             if (weightA !== weightB) {
                 return weightA - weightB;
             }
-
-            // 2. Se o status for igual, ordena por Nome (A-Z)
             return (a.nome || '').localeCompare(b.nome || '');
         });
 
-    // --- CÁLCULO DO TOTAL CONFIRMADO ---
     const totalRevenue = attendees.reduce((acc, att) => {
         if (att.status?.toLowerCase() === 'pago') {
             return acc + (Number(event?.preco) || 0);
@@ -86,6 +89,8 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
         if (!selectedAttendee || !id) return;
 
         setIsProcessing(true);
+        const toastId = toast.loading("Confirmando pagamento...");
+
         try {
             await eventApi.confirmPayment(id, selectedAttendee.numero_inscricao);
 
@@ -95,22 +100,16 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                     : att
             ));
 
+            toast.success("Pagamento confirmado!", { id: toastId });
             setIsModalOpen(false);
             setSelectedAttendee(null);
         } catch (err) {
-            alert("Erro ao confirmar pagamento.");
             console.error(err);
+            toast.error("Erro ao confirmar pagamento.", { id: toastId });
         } finally {
             setIsProcessing(false);
         }
     };
-
-    const filteredAttendees = attendees.filter((att: any) => {
-        const search = searchTerm.toLowerCase();
-        const nome = att.nome?.toLowerCase() || '';
-        const email = att.email?.toLowerCase() || '';
-        return nome.includes(search) || email.includes(search);
-    });
 
     const renderStatus = (status: string) => {
         switch (status.toLowerCase()) {
@@ -125,13 +124,13 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
         }
     };
 
+    if (!church) return null;
     if (isLoading) return <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>;
     if (!event) return <div className="p-12 text-center text-gray-500 font-medium">Evento não encontrado.</div>;
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
 
-            {/* Modal de Confirmação */}
             <ConfirmationModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
@@ -165,14 +164,11 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                     </div>
                 </div>
 
-                {/* Cards de Resumo */}
                 <div className="flex flex-wrap items-center gap-3">
-                    {/* Total Inscritos */}
                     <div className="bg-[#eff6ff] text-[#1e3a8a] px-4 py-2.5 rounded-xl font-bold text-sm border border-blue-100 shadow-sm flex items-center">
                         Inscritos: {attendees.length}
                     </div>
 
-                    {/* Total Arrecadado (Novo) */}
                     <div className="bg-emerald-50 text-emerald-700 px-4 py-2.5 rounded-xl font-bold text-sm border border-emerald-100 shadow-sm flex items-center">
                         <DollarSign size={16} className="mr-1.5" />
                         Recebido: R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -185,8 +181,6 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
             </div>
 
             <div className="premium-card p-0 overflow-hidden flex flex-col">
-
-                {/* Barra de Busca */}
                 <div className="p-5 border-b border-gray-100 bg-gray-50/50 flex items-center gap-3">
                     <Search size={20} className="text-gray-400" />
                     <input
@@ -198,7 +192,6 @@ const EventAttendeesPage: React.FC<{ churchId: string }> = ({ churchId }) => {
                     />
                 </div>
 
-                {/* Tabela */}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>

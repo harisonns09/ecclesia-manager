@@ -1,41 +1,46 @@
 import React, { useState } from 'react';
 import { Lock, User, ArrowLeft, Loader, Church } from 'lucide-react';
 import { authApi } from '../services/api';
+import { useApp } from '../contexts/AppContext'; // Contexto
+import { toast } from 'sonner';
 
+// Props simplificadas: apenas onBack, pois o login é global
 interface LoginProps {
-  onLogin: (user: any) => void;
   onBack: () => void;
+  // onLogin removido (agora via contexto)
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
-  const [login, setLogin] = useState('');
+const Login: React.FC<LoginProps> = ({ onBack }) => {
+  const { login: performLogin } = useApp(); // Função de login do contexto
+
+  const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setIsLoading(true);
 
     try {
-      const data = await authApi.login(login, password);
+      const data = await authApi.login(loginInput, password);
       const token = data.token;
 
       if (token) {
         localStorage.setItem('church_token', token);
         const userData = {
-            name: data.nome || login.split('@')[0],
-            login: login,
-            role: 'ADMIN'
+            name: data.nome || loginInput.split('@')[0],
+            email: loginInput,
+            role: 'ADMIN' // ou vir do backend
         };
-        onLogin(userData); 
+        
+        toast.success("Bem-vindo de volta!");
+        performLogin(userData); // Chama a função do contexto que redireciona
       } else {
-        setError('Token inválido recebido do servidor.');
+        toast.error('Token inválido recebido do servidor.');
       }
     } catch (err) {
       console.error(err);
-      setError('Falha no login. Verifique suas credenciais.');
+      toast.error('Falha no login. Verifique suas credenciais.');
     } finally {
       setIsLoading(false);
     }
@@ -71,12 +76,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6">
-          {error && (
-            <div className="p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-100 flex items-center justify-center font-medium animate-in fade-in slide-in-from-top-2">
-              {error}
-            </div>
-          )}
-
+          
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider ml-1">Usuário / Email</label>
             <div className="relative group">
@@ -84,8 +84,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, onBack }) => {
               <input
                 type="text"
                 required
-                value={login}
-                onChange={(e) => setLogin(e.target.value)}
+                value={loginInput}
+                onChange={(e) => setLoginInput(e.target.value)}
                 className="input-field !pl-12 !py-3.5 bg-gray-50 focus:bg-white"
                 placeholder="admin@ecclesia.com"
               />
