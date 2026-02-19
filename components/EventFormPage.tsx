@@ -12,6 +12,7 @@ interface EventoBackend {
   descricao: string;
   local: string;
   preco: number;
+  precoPromocional?: number;
   ministerioResponsavel: string;
 }
 
@@ -31,6 +32,7 @@ const EventFormPage: React.FC = () => {
     descricao: '',
     local: 'Templo Principal',
     preco: 0,
+    precoPromocional: 0,
     ministerioResponsavel: 'Geral'
   };
 
@@ -57,6 +59,7 @@ const EventFormPage: React.FC = () => {
           descricao: eventToEdit.descricao || '',
           local: eventToEdit.local,
           preco: Number(eventToEdit.preco) || 0,
+          precoPromocional: Number(eventToEdit.precoPromocional) || 0,
           ministerioResponsavel: eventToEdit.ministerioResponsavel || 'Geral'
         });
       } else {
@@ -189,7 +192,7 @@ const EventFormPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Grid: Local e Preço */}
+          {/* Grid: Local*/}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Local</label>
@@ -203,6 +206,11 @@ const EventFormPage: React.FC = () => {
                       <MapPin size={18} className="absolute left-3 top-3.5 text-gray-400" />
                   </div>
               </div>
+              
+          </div>
+
+          {/* Grid: Preço e Preço Promocional */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor (R$)</label>
                   <div className="relative">
@@ -211,6 +219,18 @@ const EventFormPage: React.FC = () => {
                         className="input-field !pl-10"
                         value={formData.preco}
                         onChange={e => setFormData({...formData, preco: parseFloat(e.target.value)})}
+                    />
+                    <DollarSign size={18} className="absolute left-3 top-3.5 text-gray-400" />
+                  </div>
+              </div>
+              <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Valor Promocional (R$)</label>
+                  <div className="relative">
+                    <input
+                        type="number" min="0" step="0.01"
+                        className="input-field !pl-10"
+                        value={formData.precoPromocional}
+                        onChange={e => setFormData({...formData, precoPromocional: parseFloat(e.target.value)})}
                     />
                     <DollarSign size={18} className="absolute left-3 top-3.5 text-gray-400" />
                   </div>

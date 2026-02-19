@@ -3,24 +3,24 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare, DollarSign } from 'lucide-react';
 import { eventApi } from '../services/api';
 import ConfirmationModal from './ConfirmationModal';
-import { useApp } from '../contexts/AppContext'; // Importe o Contexto
-import { toast } from 'sonner'; // Importe o Toast
+import { useApp } from '../contexts/AppContext'; 
+import { toast } from 'sonner';
 
-// Sem props!
 const EventAttendeesPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { currentChurch: church } = useApp(); // Pegando a igreja do contexto
+    const { currentChurch: church } = useApp();
 
     const [event, setEvent] = useState<any>(null);
     const [attendees, setAttendees] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Estado do Modal
+    // Estado do Modal e Seleção de Pagamento
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedAttendee, setSelectedAttendee] = useState<any>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [paymentType, setPaymentType] = useState<'INTEGRAL' | 'PROMOCIONAL'>('INTEGRAL'); 
 
     useEffect(() => {
         if (church && id) {
@@ -32,8 +32,6 @@ const EventAttendeesPage: React.FC = () => {
         if (!church) return;
         setIsLoading(true);
         try {
-            // Nota: eventApi.getById pode precisar do churchId dependendo da implementação do seu backend
-            // Se for rota pública, ok. Se for admin, talvez precise passar church.id
             const data = await eventApi.getById("public", eventId); 
             if (data) {
                 setEvent(data);
@@ -75,13 +73,19 @@ const EventAttendeesPage: React.FC = () => {
 
     const totalRevenue = attendees.reduce((acc, att) => {
         if (att.status?.toLowerCase() === 'pago') {
-            return acc + (Number(event?.preco) || 0);
+            // Usa o valor específico salvo na inscrição, ou o valor integral como fallback
+            const valorCalculado = att.tipoPagamentoSelecionado === 'PROMOCIONAL' || att.valorPago === event?.precoPromocional
+                ? Number(event?.precoPromocional) 
+                : Number(event?.preco);
+                
+            return acc + (valorCalculado || 0);
         }
         return acc;
     }, 0);
 
     const openConfirmModal = (attendee: any) => {
         setSelectedAttendee(attendee);
+        setPaymentType('INTEGRAL'); 
         setIsModalOpen(true);
     };
 
@@ -92,11 +96,11 @@ const EventAttendeesPage: React.FC = () => {
         const toastId = toast.loading("Confirmando pagamento...");
 
         try {
-            await eventApi.confirmPayment(id, selectedAttendee.numero_inscricao);
+            await eventApi.confirmPayment(id, selectedAttendee.numero_inscricao, { tipoValor: paymentType });
 
             setAttendees(prev => prev.map(att =>
                 att.numero_inscricao === selectedAttendee.numero_inscricao
-                    ? { ...att, status: 'PAGO' }
+                    ? { ...att, status: 'PAGO', tipoPagamentoSelecionado: paymentType } 
                     : att
             ));
 
@@ -112,21 +116,25 @@ const EventAttendeesPage: React.FC = () => {
     };
 
     const renderStatus = (status: string) => {
-        switch (status.toLowerCase()) {
-            case 'PAGO'.toLowerCase():
-                return <span className="flex items-center text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-emerald-100 uppercase tracking-wide"><CheckCircle size={12} className="mr-1.5" /> PAGO</span>;
-            case 'PENDENTE'.toLowerCase():
-                return <span className="flex items-center text-orange-700 bg-orange-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-orange-100 uppercase tracking-wide"><Clock size={12} className="mr-1.5" /> PENDENTE</span>;
-            case 'CANCELADO'.toLowerCase():
-                return <span className="flex items-center text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-red-100 uppercase tracking-wide"><XCircle size={12} className="mr-1.5" /> CANCELADO</span>;
+        switch (status?.toLowerCase()) {
+            case 'pago':
+                return <span className="flex items-center text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-emerald-100 uppercase tracking-wide w-fit"><CheckCircle size={12} className="mr-1.5" /> PAGO</span>;
+            case 'pendente':
+                return <span className="flex items-center text-orange-700 bg-orange-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-orange-100 uppercase tracking-wide w-fit"><Clock size={12} className="mr-1.5" /> PENDENTE</span>;
+            case 'cancelado':
+                return <span className="flex items-center text-red-700 bg-red-50 px-2.5 py-1 rounded-md text-[10px] font-bold border border-red-100 uppercase tracking-wide w-fit"><XCircle size={12} className="mr-1.5" /> CANCELADO</span>;
             default:
-                return <span className="text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide">{status}</span>;
+                return <span className="text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide w-fit">{status}</span>;
         }
     };
 
     if (!church) return null;
     if (isLoading) return <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>;
     if (!event) return <div className="p-12 text-center text-gray-500 font-medium">Evento não encontrado.</div>;
+
+    // --- Lógica de Preços para o Modal ---
+    const hasPromo = event?.precoPromocional && Number(event?.precoPromocional) > 0;
+    const precoIntegral = Number(event?.preco) || 0;
 
     return (
         <div className="max-w-7xl mx-auto animate-in fade-in duration-500 pb-12">
@@ -135,20 +143,70 @@ const EventAttendeesPage: React.FC = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 onConfirm={handleConfirmPayment}
-                title="Confirmar Pagamento"
+                title="Confirmar Pagamento Manual"
                 description={
-                    <>
-                        Deseja confirmar o pagamento da inscrição de <strong>{selectedAttendee?.nome}</strong>?
-                        <br /><br />
-                        <span className="text-sm text-gray-500">Esta ação registrará que o pagamento foi recebido em dinheiro ou outro meio externo.</span>
-                    </>
+                    <div className="space-y-4 text-left text-gray-700">
+                        <p>
+                            Confirme o recebimento do pagamento para <strong>{selectedAttendee?.nome}</strong>.
+                        </p>
+                        
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
+                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Valor Recebido</p>
+                            
+                            {hasPromo ? (
+                                // SE O EVENTO TEM PROMOÇÃO: Exibe Radio Buttons
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer transition-colors border border-transparent hover:border-gray-200">
+                                        <input 
+                                            type="radio" 
+                                            name="paymentType" 
+                                            value="INTEGRAL"
+                                            checked={paymentType === 'INTEGRAL'}
+                                            onChange={() => setPaymentType('INTEGRAL')}
+                                            className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
+                                        />
+                                        <span className="font-medium">
+                                            Valor Integral 
+                                            <span className="text-gray-500 ml-1">(R$ {precoIntegral.toFixed(2)})</span>
+                                        </span>
+                                    </label>
+
+                                    <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer transition-colors border border-transparent hover:border-gray-200">
+                                        <input 
+                                            type="radio" 
+                                            name="paymentType" 
+                                            value="PROMOCIONAL"
+                                            checked={paymentType === 'PROMOCIONAL'}
+                                            onChange={() => setPaymentType('PROMOCIONAL')}
+                                            className="w-4 h-4 text-[#1e3a8a] border-gray-300 focus:ring-[#1e3a8a]"
+                                        />
+                                        <span className="font-medium text-[#1e3a8a]">
+                                            Valor Promocional 
+                                            <span className="text-gray-500 ml-1 text-sm">(R$ {Number(event.precoPromocional).toFixed(2)})</span>
+                                        </span>
+                                    </label>
+                                </div>
+                            ) : (
+                                // SE NÃO TEM PROMOÇÃO: Exibe apenas o valor fixo
+                                <div className="p-2 bg-white rounded border border-gray-100 flex items-center justify-between">
+                                    <span className="font-medium text-gray-600">Valor Único:</span>
+                                    <span className="text-lg font-bold text-emerald-600">
+                                        {precoIntegral > 0 ? `R$ ${precoIntegral.toFixed(2)}` : 'Grátis'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <CheckCircle size={12} className="text-emerald-500"/>
+                            Esta ação mudará o status do inscrito para "PAGO".
+                        </p>
+                    </div>
                 }
                 confirmText="Confirmar Recebimento"
                 isProcessing={isProcessing}
                 colorClass="emerald"
             />
 
-            {/* Header */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 mb-8 border-b border-gray-200 pb-6">
                 <div className="flex items-center">
                     <button onClick={() => navigate('/admin/events')} className="mr-5 p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-[#1e3a8a]">
@@ -199,7 +257,7 @@ const EventAttendeesPage: React.FC = () => {
                                 <th className="px-6 py-4">Inscrito</th>
                                 <th className="px-6 py-4">Contato</th>
                                 <th className="px-6 py-4">Data</th>
-                                <th className="px-6 py-4">Pagamento</th>
+                                <th className="px-6 py-4">Valor</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
@@ -223,10 +281,18 @@ const EventAttendeesPage: React.FC = () => {
                                         </td>
 
                                         <td className="px-6 py-4 text-sm">
-                                            <p className='font-bold text-[#1e3a8a]'>{event.preco > 0 ? `R$ ${Number(event.preco).toFixed(2)}` : 'Grátis'}</p>
-                                            <p className="text-[10px] text-gray-400 uppercase font-medium mt-0.5">{att.tipoPagamento || '-'}</p>
+                                            <p className='font-bold text-[#1e3a8a]'>
+                                                {att.tipoPagamentoSelecionado === 'PROMOCIONAL' || att.valorPago === event.precoPromocional
+                                                    ? `R$ ${Number(event.precoPromocional).toFixed(2)}` 
+                                                    : event.preco > 0 
+                                                        ? `R$ ${Number(event.preco).toFixed(2)}` 
+                                                        : 'Grátis'}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 uppercase font-medium mt-0.5">
+                                                {att.tipoPagamentoSelecionado || att.tipoPagamento || '-'}
+                                            </p>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-6 py-4 flex justify-center">
                                             {renderStatus(att.status)}
                                         </td>
                                         <td className="px-6 py-4 text-right">

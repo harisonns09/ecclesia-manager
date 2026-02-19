@@ -191,8 +191,13 @@ export const eventApi = {
     return response.data;
   },
 
-  confirmPayment: async (eventId: string, registrationId: string) => {
-    await api.put(`/api/inscricoes/confirmarPagamento/${eventId}/${registrationId}`);
+  confirmPayment: async (
+    eventId: string,
+    registrationId: string,
+    data: { tipoValor: 'INTEGRAL' | 'PROMOCIONAL' } // Recebe o objeto do React
+  ) => {
+    // Retirado o /api inicial (assumindo que o axios já tem baseURL)
+    await api.put(`/api/inscricoes/confirmarPagamento/${eventId}/${registrationId}`, data);
   },
 };
 
