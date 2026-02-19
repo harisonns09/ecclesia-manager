@@ -85,6 +85,7 @@ export interface Event {
   descricao: string;
   local: string;
   preco?: number;
+  precoPromocional?: number;
   inscricoes?: EventRegistration[]; 
   ministerioResponsavel: string;
 }
