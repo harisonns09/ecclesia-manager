@@ -1,19 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Home, User, MapPin, Clock, Calendar, Plus, Edit2, Trash2, X, Save } from 'lucide-react';
+import { Home, User, MapPin, Clock, Calendar, Plus, Edit2, Trash2, X, Save, Loader } from 'lucide-react';
 import { SmallGroup } from '../types';
 import { smallGroupApi } from '../services/api';
+import { useApp } from '../contexts/AppContext'; // Contexto
+import { toast } from 'sonner'; // Toasts
 
-interface SmallGroupsProps {
-  churchId: string;
-}
-
-const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
+const SmallGroups: React.FC = () => {
+  const { currentChurch: church } = useApp();
   const [groups, setGroups] = useState<SmallGroup[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Estado do Formulário
   const initialFormState = {
     name: '',
     leaderName: '',
@@ -26,18 +24,18 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
   const [formData, setFormData] = useState<Partial<SmallGroup>>(initialFormState);
 
   useEffect(() => {
-    if (churchId) {
-      loadGroups();
-    }
-  }, [churchId]);
+    if (church) loadGroups();
+  }, [church]);
 
   const loadGroups = async () => {
+    if (!church) return;
     setIsLoading(true);
     try {
-      const data = await smallGroupApi.getByChurch(churchId);
+      const data = await smallGroupApi.getByChurch(church.id);
       setGroups(data);
     } catch (error) {
       console.error("Erro ao carregar células:", error);
+      toast.error("Erro ao carregar lista de grupos.");
     } finally {
       setIsLoading(false);
     }
@@ -45,31 +43,38 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!churchId) return;
+    if (!church) return;
+
+    const toastId = toast.loading(editingId ? "Atualizando grupo..." : "Criando grupo...");
 
     try {
       if (editingId) {
-        const updated = await smallGroupApi.update(churchId, editingId, formData);
+        const updated = await smallGroupApi.update(church.id, editingId, formData);
         setGroups(prev => prev.map(g => g.id === editingId ? updated : g));
+        toast.success("Grupo atualizado!", { id: toastId });
       } else {
-        const created = await smallGroupApi.create(churchId, formData);
+        const created = await smallGroupApi.create(church.id, formData);
         setGroups(prev => [...prev, created]);
+        toast.success("Grupo criado com sucesso!", { id: toastId });
       }
       resetForm();
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      alert("Erro ao salvar os dados.");
+      toast.error("Erro ao salvar os dados.", { id: toastId });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir esta célula?")) return;
+    if (!church) return;
+    if (!window.confirm("Tem certeza que deseja excluir esta célula?")) return;
+
+    const toastId = toast.loading("Removendo...");
     try {
-      await smallGroupApi.delete(churchId, id);
+      await smallGroupApi.delete(church.id, id);
       setGroups(prev => prev.filter(g => g.id !== id));
+      toast.success("Célula removida.", { id: toastId });
     } catch (error) {
-      console.error("Erro ao excluir:", error);
-      alert("Erro ao excluir célula.");
+      toast.error("Erro ao excluir célula.", { id: toastId });
     }
   };
 
@@ -88,10 +93,10 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
 
   const daysOfWeek = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
 
+  if (!church) return null;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
         <div>
             <h2 className="text-2xl font-bold text-[#0f172a]">Pequenos Grupos</h2>
@@ -106,13 +111,11 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
         </button>
       </div>
 
-      {/* Formulário */}
       {showForm && (
         <div className="premium-card p-0 overflow-hidden mb-8 animate-in slide-in-from-top-4">
           <div className="bg-gray-50/50 p-6 border-b border-gray-100">
              <h3 className="font-bold text-[#0f172a] text-lg">{editingId ? 'Editar Célula' : 'Nova Célula'}</h3>
           </div>
-          
           <form onSubmit={handleSubmit} className="p-6 space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -126,7 +129,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                     <Home size={18} className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
               </div>
-              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Líder Responsável</label>
                 <div className="relative">
@@ -138,7 +140,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                     <User size={18} className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
               </div>
-
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Anfitrião (Casa)</label>
                 <div className="relative">
@@ -150,7 +151,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                     <Home size={18} className="absolute left-3 top-3.5 text-gray-400" />
                 </div>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                  <div>
                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dia</label>
@@ -176,7 +176,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                    </div>
                  </div>
               </div>
-
               <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Endereço</label>
@@ -199,7 +198,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                   </div>
               </div>
             </div>
-            
             <div className="flex gap-3 justify-end pt-4 border-t border-gray-100 mt-2">
                <button type="button" onClick={resetForm} className="btn-secondary">Cancelar</button>
                <button type="submit" className="btn-primary shadow-md">
@@ -210,9 +208,8 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
         </div>
       )}
 
-      {/* Lista */}
       {isLoading ? (
-        <div className="text-center py-12 text-gray-500">Carregando células...</div>
+        <div className="flex justify-center py-20"><Loader className="animate-spin text-blue-600" size={40} /></div>
       ) : groups.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-300">
           <Home size={48} className="mx-auto text-gray-300 mb-3" />
@@ -228,7 +225,6 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                   {group.neighborhood}
                 </span>
               </div>
-              
               <div className="p-5 flex-1 space-y-3">
                 <div className="flex items-center text-sm text-gray-600">
                   <User size={16} className="mr-2.5 text-orange-500 flex-shrink-0" />
@@ -249,22 +245,9 @@ const SmallGroups: React.FC<SmallGroupsProps> = ({ churchId }) => {
                   <span className="line-clamp-2">{group.address}</span>
                 </div>
               </div>
-
               <div className="bg-gray-50/50 px-5 py-3 border-t border-gray-100 flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
-                <button 
-                  onClick={() => startEdit(group)} 
-                  className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
-                  title="Editar"
-                >
-                  <Edit2 size={18} />
-                </button>
-                <button 
-                  onClick={() => handleDelete(group.id)} 
-                  className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
-                  title="Excluir"
-                >
-                  <Trash2 size={18} />
-                </button>
+                <button onClick={() => startEdit(group)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"><Edit2 size={18} /></button>
+                <button onClick={() => handleDelete(group.id)} className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={18} /></button>
               </div>
             </div>
           ))}

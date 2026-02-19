@@ -1,61 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Heart, MapPin, Clock, Instagram, ArrowRight } from 'lucide-react';
-import { Event, Church } from '../types';
+import { Event } from '../types';
+import { eventApi } from '../services/api';
+import { useApp } from '../contexts/AppContext'; // Contexto
+import { useNavigate } from 'react-router-dom';
 
-interface PublicHomeProps {
-  events: Event[];
-  church: Church;
-  onNavigateToEvents: () => void;
-  onNavigateToRegistration: (event: Event) => void;
-}
+// Sem props!
+const PublicHome: React.FC = () => {
+  const navigate = useNavigate();
+  const { currentChurch: church } = useApp();
+  const [events, setEvents] = useState<Event[]>([]);
 
-const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEvents, onNavigateToRegistration }) => {
+  // Carrega eventos (apenas os futuros)
+  useEffect(() => {
+    if (church) {
+      loadEvents();
+    }
+  }, [church]);
+
+  const loadEvents = async () => {
+    if (!church) return;
+    try {
+      const data = await eventApi.getByChurch(church.id);
+      // Filtra apenas eventos futuros e ordena
+      const upcoming = data
+        .filter(e => new Date(e.dataEvento) >= new Date(new Date().setHours(0,0,0,0)))
+        .sort((a: any, b: any) => new Date(a.dataEvento).getTime() - new Date(b.dataEvento).getTime());
+      
+      setEvents(upcoming);
+    } catch (err) {
+      console.error("Erro ao carregar eventos da home:", err);
+    }
+  };
+
   const nextEvent = events.length > 0 ? events[0] : null;
 
+  if (!church) return null;
+
   return (
-    // Usamos a classe de animação do CSS
     <div className="space-y-12 pb-12 fade-in-up">
       
-      {/* --- HERO SECTION (Usando classe .hero-gradient) --- */}
+      {/* --- HERO SECTION --- */}
       <div className="hero-gradient p-8 md:p-16 mx-4 lg:mx-0">
-        <div className="hero-overlay"></div> {/* Textura via CSS */}
+        <div className="hero-overlay"></div>
         
         <div className="relative z-10 max-w-3xl">
           <div className="badge badge-outline-white mb-6">
-             Bem-vindo
+              Bem-vindo
           </div>
 
           <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-             {church.name}
+              {church.name}
           </h1>
           
           <p className="text-lg md:text-xl text-indigo-100 mb-10 leading-relaxed">
-             Uma comunidade de fé em <strong>{church.city}</strong>. Conecte-se conosco, participe de nossos eventos e faça parte desta família.
+              Uma comunidade de fé em <strong>{church.city}</strong>. Conecte-se conosco, participe de nossos eventos e faça parte desta família.
           </p>
           
           <div className="flex flex-wrap gap-4">
-             <button onClick={onNavigateToEvents} className="btn-secondary text-indigo-900 shadow-lg">
+              <button onClick={() => navigate('/eventos')} className="btn-secondary text-indigo-900 shadow-lg">
                 Ver Programação <ArrowRight size={18} />
-             </button>
-             
-             {church.instagram && (
+              </button>
+              
+              {church.instagram && (
                 <a 
                   href={`https://instagram.com/${church.instagram.replace('@', '')}`}
                   target="_blank" 
                   rel="noreferrer"
-                  // Botão customizado com gradiente específico
                   className="inline-flex items-center px-6 py-3 rounded-xl font-bold text-white shadow-lg hover:shadow-xl transition-all"
                   style={{ background: 'linear-gradient(to right, #ec4899, #8b5cf6)' }}
                 >
                    <Instagram size={20} className="mr-2" />
                    Seguir no Instagram
                 </a>
-             )}
+              )}
           </div>
         </div>
       </div>
 
-      {/* --- GRID DE INFORMAÇÕES (Usando .premium-card) --- */}
+      {/* --- GRID DE INFORMAÇÕES --- */}
       <div className="max-w-7xl mx-auto px-4 lg:px-0">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             
@@ -120,9 +143,9 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEve
                 {/* Conteúdo */}
                 <div className="p-8 md:p-10 flex-1 flex flex-col justify-center">
                     <div className="mb-3">
-                         <span className="badge badge-indigo">
+                          <span className="badge badge-indigo">
                             {nextEvent.ministerioResponsavel || 'Geral'}
-                         </span>
+                          </span>
                     </div>
 
                     <h3 className="text-3xl font-bold text-gray-900 mb-3">
@@ -139,7 +162,7 @@ const PublicHome: React.FC<PublicHomeProps> = ({ events, church, onNavigateToEve
 
                     <div>
                         <button 
-                            onClick={() => onNavigateToRegistration(nextEvent)}
+                            onClick={() => navigate(`/evento/${nextEvent.id}/inscricao`)}
                             className="btn-primary"
                         >
                             Inscrever-se Agora <ArrowRight size={18} />

@@ -1,21 +1,20 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
+import { useApp } from '../contexts/AppContext'; // Importe o Hook
+import { id } from 'zod/locales';
 
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
-  onLogout: () => void;
-  currentUser: { name: string; email: string; role: string } | null;
-  onExitChurch: () => void;
-  activeTab?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({
-  isOpen, setIsOpen, onLogout, currentUser, onExitChurch
-}) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  
+  // Consumindo do Contexto Global
+  const { currentUser, logout, exitChurch } = useApp();
 
   const menuItems = [
     { id: '/admin/dashboard', label: 'Painel Geral', icon: <LayoutDashboard size={20} /> },
@@ -24,8 +23,9 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={20} /> },
     { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
     { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={20} /> },
-    // { id: '/admin/prayer-wall', label: 'Mural de Oração', icon: <HeartHandshake size={20} /> },
     { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
+    { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={20} /> },
+    { id: '/admin/kids/dashboard', label: 'Dashboard Kids', icon: <Baby size={20} /> },
   ];
 
   return (
@@ -93,13 +93,13 @@ const Sidebar: React.FC<SidebarProps> = ({
         {/* Footer com Ações */}
         <div className="p-4 border-t border-[#3b82f6]/20 bg-[#172554]/30 space-y-2">
           <button 
-            onClick={onExitChurch} 
+            onClick={exitChurch} 
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-blue-200 rounded-xl hover:bg-white/5 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} className="mr-3" /> Trocar Igreja
           </button>
           <button 
-            onClick={onLogout} 
+            onClick={logout} 
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-300 rounded-xl hover:bg-red-500/10 hover:text-red-200 transition-colors"
           >
             <LogOut size={18} className="mr-3" /> Sair do Sistema

@@ -1,33 +1,36 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, Calendar, LogIn, ArrowLeft, LogOut, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext'; // Importe o Hook
 
+// Interface de props agora é opcional ou vazia, pois tudo vem do contexto
+// Mantive onSidebarToggle pois é uma ação de UI local entre Navbar e Layout
 interface NavbarProps {
-  isAuthenticated: boolean;
-  onLoginClick: () => void;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
-  onLogout: () => void;
-  churchName: string;
-  onChangeChurch: () => void;
   onSidebarToggle?: () => void;
+  activeTab: string; // Mantido pois é controle de UI da página atual
+  setActiveTab: (tab: string) => void;
 }
 
 const Navbar: React.FC<NavbarProps> = ({ 
-  isAuthenticated, 
-  onLoginClick, 
-  activeTab, 
-  onLogout, 
-  churchName, 
-  onChangeChurch,
-  onSidebarToggle
+  onSidebarToggle,
+  activeTab,
+  setActiveTab
 }) => {
+  // Consumindo do Contexto Global
+  const { 
+    isAuthenticated, 
+    currentChurch, 
+    logout, 
+    exitChurch 
+  } = useApp();
+
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
 
   const handleNavigation = (id: string) => {
     if (id === 'home') navigate('/');
     else if (id === 'events-public') navigate('/eventos');
+    setActiveTab(id);
     setIsOpen(false);
   };
 
@@ -36,28 +39,31 @@ const Navbar: React.FC<NavbarProps> = ({
     { id: 'events-public', label: 'Eventos', icon: <Calendar size={18} /> },
   ];
 
+  const churchName = currentChurch?.name || 'Ecclesia Manager';
+
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm backdrop-blur-md bg-white/90">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20"> {/* Altura um pouco maior para elegância */}
+        <div className="flex justify-between h-20"> 
           
-          {/* LADO ESQUERDO: LOGO E TROCAR IGREJA */}
+          {/* LADO ESQUERDO */}
           <div className="flex items-center">
-            <button 
-              onClick={onChangeChurch}
-              className="mr-4 p-2 rounded-full text-gray-400 hover:text-primary-900 hover:bg-primary-50 transition-all duration-200 group"
-              title="Trocar Igreja"
-            >
-              <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-            </button>
+            {currentChurch && (
+                <button 
+                onClick={exitChurch} // Usa a função do contexto
+                className="mr-4 p-2 rounded-full text-gray-400 hover:text-primary-900 hover:bg-primary-50 transition-all duration-200 group"
+                title="Trocar Igreja"
+                >
+                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                </button>
+            )}
 
             <div 
               className="flex-shrink-0 flex items-center gap-3 cursor-pointer group"
               onClick={() => navigate('/')}
             >
-              {/* Logo Box - Azul Marinho */}
               <div className="w-10 h-10 rounded-xl bg-primary-900 flex items-center justify-center text-white font-bold text-lg shadow-md group-hover:bg-primary-800 transition-colors">
-                {churchName.charAt(0) || 'E'}
+                {churchName.charAt(0)}
               </div>
               
               <div className="flex flex-col justify-center">
@@ -67,7 +73,6 @@ const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-xs text-gray-500 font-medium uppercase tracking-wider hidden md:block">
                   Portal de Membros
                 </span>
-                {/* Mobile Name */}
                 <span className="text-lg font-bold text-gray-900 md:hidden block truncate max-w-[150px]">
                   {churchName}
                 </span>
@@ -75,7 +80,7 @@ const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* CENTRO/DIREITA: NAVEGAÇÃO DESKTOP */}
+          {/* CENTRO/DIREITA */}
           <div className="hidden md:flex md:items-center md:space-x-4">
             {navItems.map((item) => (
               <button
@@ -107,7 +112,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 </button>
 
                 <button
-                  onClick={onLogout}
+                  onClick={logout} // Usa logout do contexto
                   className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center"
                   title="Sair do sistema"
                 >
@@ -116,7 +121,7 @@ const Navbar: React.FC<NavbarProps> = ({
               </div>
             ) : (
               <button
-                onClick={onLoginClick}
+                onClick={() => navigate('/login')}
                 className="px-5 py-2.5 rounded-lg bg-primary-900 text-white text-sm font-bold hover:bg-primary-800 transition-all shadow-md hover:shadow-lg flex items-center hover:-translate-y-0.5"
               >
                 <LogIn size={18} className="mr-2" />
@@ -180,7 +185,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
                   <button
                     onClick={() => {
-                      onLogout();
+                      logout();
                       setIsOpen(false);
                     }}
                     className="w-full flex items-center justify-center px-4 py-3.5 text-base font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-xl border border-red-100"
@@ -192,7 +197,7 @@ const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <button
                   onClick={() => {
-                    onLoginClick();
+                    navigate('/login');
                     setIsOpen(false);
                   }}
                   className="w-full flex items-center justify-center px-4 py-3.5 text-base font-bold text-white bg-primary-900 hover:bg-primary-800 rounded-xl shadow-md"

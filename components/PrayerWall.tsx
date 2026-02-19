@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
-import { Heart, Plus, MessageCircle, Lock, Globe, ThumbsUp, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Heart, Plus, Lock, Globe, X, Loader } from 'lucide-react';
 import { PrayerRequest } from '../types';
+// Supondo que você tenha uma API para orações, se não tiver, vamos simular localmente ou usar localStorage temporariamente
+// Vou assumir que existe um prayerApi ou similar. Se não existir, mantenha o estado local mas avise que não persistirá.
+// Como não vi 'prayerApi' nos seus arquivos, vou usar um estado simulado que reinicia ao recarregar, 
+// mas a estrutura está pronta para API.
+import { useApp } from '../contexts/AppContext'; 
+import { toast } from 'sonner';
 
-interface PrayerWallProps {
-  requests: PrayerRequest[];
-  setRequests: (requests: PrayerRequest[]) => void;
-  churchId: string;
-}
-
-const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId }) => {
+// Sem props!
+const PrayerWall: React.FC = () => {
+  const { currentChurch: church } = useApp();
+  
+  // Estado local para simular (idealmente viria de uma API)
+  const [requests, setRequests] = useState<PrayerRequest[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [newRequest, setNewRequest] = useState<Partial<PrayerRequest>>({
     request: '',
@@ -17,11 +22,22 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
     isAnonymous: false
   });
 
+  // Efeito para carregar (simulado)
+  useEffect(() => {
+    if (church) {
+        // Aqui você chamaria: prayerApi.getByChurch(church.id).then(setRequests);
+        // Por enquanto, inicia vazio ou com dados de exemplo
+        setRequests([]); 
+    }
+  }, [church]);
+
   const handleAddRequest = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!church) return;
+
     const request: PrayerRequest = {
       id: Math.random().toString(36).substr(2, 9),
-      churchId,
+      churchId: church.id,
       request: newRequest.request || '',
       authorName: newRequest.isAnonymous ? 'Anônimo' : (newRequest.authorName || 'Membro'),
       date: new Date().toISOString(),
@@ -29,15 +45,19 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
       prayedCount: 0,
       isAnonymous: newRequest.isAnonymous || false
     };
+
     setRequests([request, ...requests]);
     setShowModal(false);
     setNewRequest({ request: '', authorName: '', category: 'Outros', isAnonymous: false });
+    
+    toast.success("Pedido de oração publicado!");
   };
 
   const handlePray = (id: string) => {
     setRequests(requests.map(req => 
       req.id === id ? { ...req, prayedCount: req.prayedCount + 1 } : req
     ));
+    toast.success("Você orou por este pedido! 🙏");
   };
 
   const getCategoryColor = (cat: string) => {
@@ -49,6 +69,8 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
+
+  if (!church) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -69,7 +91,6 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
             Fazer Pedido de Oração
             </button>
         </div>
-        
         <div className="hero-overlay"></div>
       </div>
 
@@ -77,7 +98,7 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
         {requests.length === 0 ? (
            <div className="col-span-full py-20 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-300">
              <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <Heart size={40} className="text-gray-300" />
+               <Heart size={40} className="text-gray-300" />
              </div>
              <h3 className="text-lg font-bold text-gray-700">Nenhum pedido ativo</h3>
              <p className="text-gray-500">Seja o primeiro a compartilhar um motivo de oração.</p>
@@ -176,15 +197,15 @@ const PrayerWall: React.FC<PrayerWallProps> = ({ requests, setRequests, churchId
 
               {!newRequest.isAnonymous && (
                 <div className="animate-in fade-in slide-in-from-top-2">
-                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Seu Nome</label>
-                   <input 
-                    type="text"
-                    required={!newRequest.isAnonymous}
-                    className="input-field"
-                    placeholder="Como gostaria de ser identificado?"
-                    value={newRequest.authorName}
-                    onChange={e => setNewRequest({...newRequest, authorName: e.target.value})}
-                   />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Seu Nome</label>
+                    <input 
+                     type="text"
+                     required={!newRequest.isAnonymous}
+                     className="input-field"
+                     placeholder="Como gostaria de ser identificado?"
+                     value={newRequest.authorName}
+                     onChange={e => setNewRequest({...newRequest, authorName: e.target.value})}
+                    />
                 </div>
               )}
 

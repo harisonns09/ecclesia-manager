@@ -2,15 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
 import { Plus, TrendingUp, TrendingDown, DollarSign, X, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { Transaction, TransactionType, TransactionCategory } from '../types';
-import { financialApi } from '../services/api'; // <--- IMPORTANTE
+import { financialApi } from '../services/api'; 
+import { useApp } from '../contexts/AppContext'; // Contexto
+import { toast } from 'sonner'; // Toast
 
-interface FinancialsProps {
-  transactions: Transaction[];
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
-  churchId: string;
-}
+// Sem props!
+const Financials: React.FC = () => {
+  const { currentChurch: church } = useApp(); // Pegando do contexto
 
-const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, churchId }) => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -23,50 +23,42 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
     date: new Date().toISOString().split('T')[0]
   });
 
-  // Estados do Modal de Feedback
-  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
-  const [feedbackMessage, setFeedbackMessage] = useState('');
-  const [isError, setIsError] = useState(false);
-
-  // 1. Carregar transações do Backend ao abrir a tela
+  // 1. Carregar transações
   useEffect(() => {
-    if (churchId) {
+    if (church) {
       loadTransactions();
     }
-  }, [churchId]);
+  }, [church]);
 
   const loadTransactions = async () => {
+    if (!church) return;
     setIsLoading(true);
     try {
-      const data = await financialApi.getByChurch(churchId);
+      const data = await financialApi.getByChurch(church.id);
       setTransactions(data);
     } catch (error) {
       console.error("Erro ao carregar finanças:", error);
+      toast.error("Erro ao carregar dados financeiros.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleFeedback = (msg: string, error = false) => {
-    setFeedbackMessage(msg);
-    setIsError(error);
-    setShowFeedbackModal(true);
-  };
-
   // 2. Salvar no Backend
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!churchId) return;
+    if (!church) return;
+
+    // Toast de loading
+    const toastId = toast.loading("Registrando transação...");
 
     try {
-      // Chama a API
-      const createdTransaction = await financialApi.create(churchId, newTrans);
+      const createdTransaction = await financialApi.create(church.id, newTrans);
       
-      // Atualiza a lista na tela (adiciona o novo no topo)
       setTransactions([createdTransaction, ...transactions]);
       
       setShowModal(false);
-      handleFeedback("Transação registrada com sucesso!");
+      toast.success("Transação registrada com sucesso!", { id: toastId });
       
       // Limpa o formulário
       setNewTrans({
@@ -79,7 +71,7 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
 
     } catch (error) {
       console.error("Erro ao criar transação:", error);
-      handleFeedback("Erro ao registrar transação. Tente novamente.", true);
+      toast.error("Erro ao registrar transação.", { id: toastId });
     }
   };
 
@@ -98,30 +90,11 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
 
   const COLORS = ['#1e3a8a', '#3b82f6', '#93c5fd', '#f59e0b', '#ef4444'];
 
+  if (!church) return null;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
       
-      {/* --- MODAL DE FEEDBACK --- */}
-      {showFeedbackModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#0f172a]/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95 border border-gray-100">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${isError ? 'bg-red-100' : 'bg-emerald-100'}`}>
-              {isError ? <XCircle size={32} className="text-red-600" /> : <CheckCircle size={32} className="text-emerald-600" />}
-            </div>
-            <h3 className={`text-xl font-bold mb-2 ${isError ? 'text-red-700' : 'text-[#0f172a]'}`}>
-                {isError ? 'Erro!' : 'Sucesso!'}
-            </h3>
-            <p className="text-gray-500 mb-8">{feedbackMessage}</p>
-            <button 
-              onClick={() => setShowFeedbackModal(false)}
-              className={`w-full py-3 text-lg shadow-lg rounded-xl font-bold text-white transition-all ${isError ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a8a] hover:bg-[#172554]'}`}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
         <div>
@@ -185,7 +158,7 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mb-2">
                                <DollarSign size={20} className="opacity-30" />
                            </div>
-                           Nenhuma transação registrada.
+                           Nenhum lançamento registrado.
                        </td>
                    </tr>
                 )}
@@ -258,7 +231,7 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
                   type="button"
                   onClick={() => setNewTrans({...newTrans, type: TransactionType.INCOME})}
                   className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
-                      newTrans.type === TransactionType.INCOME 
+                    newTrans.type === TransactionType.INCOME 
                       ? 'bg-white text-emerald-600 shadow-sm' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -270,7 +243,7 @@ const Financials: React.FC<FinancialsProps> = ({ transactions, setTransactions, 
                   type="button"
                   onClick={() => setNewTrans({...newTrans, type: TransactionType.EXPENSE})}
                   className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
-                      newTrans.type === TransactionType.EXPENSE 
+                    newTrans.type === TransactionType.EXPENSE 
                       ? 'bg-white text-red-600 shadow-sm' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Edit2, X, User, Save, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Plus, Trash2, Edit2, X, User, Save } from 'lucide-react';
 import { Ministry, Member } from '../types';
 import { ministryApi, memberApi } from '../services/api';
+import { useApp } from '../contexts/AppContext'; // Contexto
+import { toast } from 'sonner'; // Toast
 
-interface MinistriesProps {
-  churchId: string;
-}
+// Sem props!
+const Ministries: React.FC = () => {
+  const { currentChurch: church } = useApp(); // Contexto
 
-const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
   const [ministries, setMinistries] = useState<Ministry[]>([]);
   const [members, setMembers] = useState<Member[]>([]); 
   const [isLoading, setIsLoading] = useState(false);
@@ -18,80 +19,73 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
   const [formData, setFormData] = useState<Partial<Ministry>>({ 
     id: '',
     nome: '', 
-    igrejaId: churchId,
+    igrejaId: church?.id,
     liderResponsavel: '',
   });
 
-  // Estado do Modal de Feedback (Sucesso/Erro)
-  const [showModal, setShowModal] = useState(false);
-  const [modalMessage, setModalMessage] = useState('');
-  const [isError, setIsError] = useState(false);
-
   useEffect(() => {
-    if (churchId) {
+    if (church) {
+      // Atualiza o ID da igreja no form caso mude
+      setFormData(prev => ({ ...prev, igrejaId: church.id }));
       loadData();
     }
-  }, [churchId]);
+  }, [church]);
 
   const loadData = async () => {
+    if (!church) return;
     setIsLoading(true);
     try {
       const [ministriesData, membersData] = await Promise.all([
-        ministryApi.getByChurch(churchId),
-        memberApi.getByChurch(churchId)
+        ministryApi.getByChurch(church.id),
+        memberApi.getByChurch(church.id)
       ]);
       
       setMinistries(ministriesData);
       setMembers(membersData);
     } catch (error) {
-      console.error("Erro ao carregar dados dos ministérios:", error);
+      console.error("Erro ao carregar dados:", error);
+      toast.error("Erro ao carregar ministérios.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const showFeedback = (message: string, error = false) => {
-    setModalMessage(message);
-    setIsError(error);
-    setShowModal(true);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!churchId) return;
+    if (!church) return;
+
+    const toastId = toast.loading(editingId ? "Atualizando..." : "Criando...");
 
     try {
       if (editingId) {
-        const updated = await ministryApi.update(churchId, editingId, formData);
+        const updated = await ministryApi.update(church.id, editingId, formData);
         setMinistries(prev => prev.map(m => m.id === editingId ? updated : m));
-        showFeedback("Ministério atualizado com sucesso!", false);
+        toast.success("Ministério atualizado!", { id: toastId });
       } else {
-        const created = await ministryApi.create(churchId, formData as Ministry);
+        const created = await ministryApi.create(church.id, formData as Ministry);
         setMinistries(prev => [...prev, created]);
-        showFeedback("Ministério criado com sucesso!", false);
+        toast.success("Ministério criado!", { id: toastId });
       }
+      resetForm();
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      showFeedback("Erro ao salvar ministério. Tente novamente.", true);
-    }
-  };
-
-  // Função chamada ao clicar em OK no Modal
-  const handleCloseModal = () => {
-    setShowModal(false);
-    if (!isError) {
-        // Só reseta e fecha o form se for sucesso
-        resetForm(); 
+      toast.error("Erro ao salvar ministério.", { id: toastId });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Tem certeza que deseja excluir este ministério?")) return;
+    if (!church) return;
+    
+    // Confirmação nativa por enquanto, ou use ConfirmationModal
+    if (!window.confirm("Tem certeza que deseja excluir este ministério?")) return;
+    
+    const toastId = toast.loading("Excluindo...");
     try {
-      await ministryApi.delete(churchId, id);
+      await ministryApi.delete(church.id, id);
       setMinistries(prev => prev.filter(m => m.id !== id));
+      toast.success("Ministério excluído.", { id: toastId });
     } catch (error) {
-      showFeedback("Erro ao excluir ministério.", true);
+      toast.error("Erro ao excluir ministério.", { id: toastId });
     }
   };
 
@@ -104,40 +98,15 @@ const Ministries: React.FC<MinistriesProps> = ({ churchId }) => {
 
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ nome: '', liderResponsavel: '' });
+    setFormData({ nome: '', liderResponsavel: '', igrejaId: church?.id });
     setShowForm(false);
   };
+
+  if (!church) return null;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
       
-      {/* --- MODAL DE FEEDBACK (SUCESSO OU ERRO) --- */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0f172a]/60 backdrop-blur-sm animate-in fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center animate-in zoom-in-95 border border-gray-100">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${isError ? 'bg-red-100' : 'bg-emerald-100'}`}>
-              {isError ? (
-                  <XCircle size={32} className="text-red-600" />
-              ) : (
-                  <CheckCircle size={32} className="text-emerald-600" />
-              )}
-            </div>
-            
-            <h3 className={`text-xl font-bold mb-2 ${isError ? 'text-red-700' : 'text-[#0f172a]'}`}>
-                {isError ? 'Erro!' : 'Sucesso!'}
-            </h3>
-            <p className="text-gray-500 mb-8">{modalMessage}</p>
-            
-            <button 
-              onClick={handleCloseModal}
-              className={`w-full py-3 text-lg shadow-lg rounded-xl font-bold text-white transition-all ${isError ? 'bg-red-600 hover:bg-red-700' : 'bg-[#1e3a8a] hover:bg-[#172554]'}`}
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
         <div>

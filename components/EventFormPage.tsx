@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Calendar, Clock, MapPin, Save, ArrowLeft, Users, Loader, AlertCircle, DollarSign } from 'lucide-react';
 import { eventApi } from '../services/api';
+import { useApp } from '../contexts/AppContext';
+import { toast } from 'sonner';
 
 interface EventoBackend {
   nomeEvento: string;
@@ -13,10 +15,11 @@ interface EventoBackend {
   ministerioResponsavel: string;
 }
 
-const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
+const EventFormPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditing = !!id;
+  const { currentChurch: church } = useApp();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -34,15 +37,16 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
   const [formData, setFormData] = useState<EventoBackend>(initialFormState);
 
   useEffect(() => {
-    if (isEditing && churchId) {
+    if (isEditing && church) {
       loadEventData();
     }
-  }, [id, churchId]);
+  }, [id, church]);
 
   const loadEventData = async () => {
+    if (!church) return;
     setIsLoading(true);
     try {
-      const allEvents = await eventApi.getByChurch(churchId);
+      const allEvents = await eventApi.getByChurch(church.id);
       const eventToEdit = allEvents.find((e: any) => String(e.id) === id);
 
       if (eventToEdit) {
@@ -56,11 +60,12 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
           ministerioResponsavel: eventToEdit.ministerioResponsavel || 'Geral'
         });
       } else {
-        setError("Evento não encontrado.");
+        toast.error("Evento não encontrado.");
+        navigate('/admin/events');
       }
     } catch (err) {
       console.error(err);
-      setError("Erro ao carregar dados do evento.");
+      toast.error("Erro ao carregar dados do evento.");
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +73,8 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!church) return;
+    
     setError('');
 
     if (!formData.ministerioResponsavel.trim()) {
@@ -76,16 +83,17 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
     }
 
     setIsLoading(true);
+    const toastId = toast.loading(isEditing ? "Atualizando evento..." : "Criando evento...");
 
     try {
       const payload = { ...formData, preco: Number(formData.preco) };
 
       if (isEditing && id) {
-        await eventApi.update(churchId, id, payload as any);
-        alert("Evento atualizado com sucesso!");
+        await eventApi.update(church.id, id, payload as any);
+        toast.success("Evento atualizado com sucesso!", { id: toastId });
       } else {
-        await eventApi.create(churchId, payload as any);
-        alert("Evento criado com sucesso!");
+        await eventApi.create(church.id, payload as any);
+        toast.success("Evento criado com sucesso!", { id: toastId });
       }
 
       navigate('/admin/events');
@@ -93,10 +101,13 @@ const EventFormPage: React.FC<{ churchId: string }> = ({ churchId }) => {
       console.error("Erro ao salvar:", err);
       const msg = err.response?.data?.message || "Erro ao salvar evento.";
       setError(msg);
+      toast.error(msg, { id: toastId });
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (!church) return null;
 
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">

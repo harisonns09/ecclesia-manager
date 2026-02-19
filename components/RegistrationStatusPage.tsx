@@ -5,6 +5,7 @@ import {
   User, ArrowLeft, Loader, CreditCard, ChevronRight, AlertTriangle 
 } from 'lucide-react';
 import { inscricaoApi, eventApi } from '../services/api';
+import { toast } from 'sonner'; // Toast
 
 const RegistrationStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -50,7 +51,10 @@ const RegistrationStatusPage: React.FC = () => {
   const handlePayOnline = async () => {
     if (!selectedRegistration) return;
     setProcessingPayment(true);
+    const toastId = toast.loading("Gerando link de pagamento...");
+
     try {
+        // Tenta atualizar o método para online (opcional)
         try {
             await eventApi.updatePaymentMethod('public', String(selectedRegistration.evento.id), selectedRegistration.numeroInscricao, 'ONLINE');
         } catch (e) { /* ignore */ }
@@ -69,12 +73,13 @@ const RegistrationStatusPage: React.FC = () => {
         );
         
         if (response.checkoutUrl) {
+            toast.success("Redirecionando...", { id: toastId });
             window.location.href = response.checkoutUrl;
         } else {
-            alert("Erro ao gerar link de pagamento.");
+            toast.error("Erro ao gerar link de pagamento.", { id: toastId });
         }
     } catch (err) {
-        alert("Erro ao conectar com gateway de pagamento.");
+        toast.error("Erro ao conectar com gateway de pagamento.", { id: toastId });
     } finally {
         setProcessingPayment(false);
     }

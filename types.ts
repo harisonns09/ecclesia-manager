@@ -155,3 +155,24 @@ export interface Visitor {
   status: VisitorStatus;
   observacao?: string; // Como conheceu a igreja, pedidos de oração, etc.
 }
+
+export interface CheckInKidsRequest {
+  igrejaId: string;
+  nomeCrianca: string;
+  nomeResponsavel: string;
+  telefoneResponsavel: string;
+  alergias?: string;
+  observacoes?: string;
+}
+
+export interface CheckInKids {
+  igrejaId: string;
+  id: number;
+  nomeCrianca: string;
+  nomeResponsavel: string;
+  telefoneResponsavel: string;
+  codigoSeguranca: string; // "K-1234"
+  dataEntrada: string;
+  alergias?: string;
+  status: 'ATIVO' | 'FINALIZADO';
+}
