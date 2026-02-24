@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
 
-const api = axios.create({
+export const api = axios.create({
   // O endereço onde seu Spring Boot está rodando
   //baseURL: 'http://localhost:8080', 
   baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
@@ -363,5 +363,39 @@ export const kidsApi = {
   checkOut: async (churchId: string, checkInId: number) => {
     await api.post(`/api/igrejas/${churchId}/kids/checkout/${checkInId}`);
   }
+};
+
+// ===== USERS ENDPOINTS =====
+export const userApi = {
+  // Criar um novo usuário no sistema
+  create: async (churchId: string, userData: any) => {
+    // Adicionamos o ID da igreja no payload para o backend saber de qual igreja é este usuário
+    const payload = { ...userData, igrejaId: churchId };
+    const response = await api.post('/api/usuarios/register', payload);
+    return response.data;
+  },
+  
+  // Buscar os usuários daquela igreja (para listar na tela)
+  getByChurch: async (churchId: string) => {
+    const response = await api.get(`/api/usuarios/${churchId}`);
+    return response.data;
+  },
+
+  delete: async (churchId: string, userId: string) => {
+    const response = await api.delete(`/api/usuarios/${userId}`);
+    return response.data;
+  },
+
+  update: async (churchId: string, userId: string, userData: any) => {
+    const payload = { ...userData, igrejaId: churchId };
+    const response = await api.put(`/api/usuarios/${userId}`, payload);
+    return response.data;
+  },
+
+  getRoles: async () => {
+    // Busca a lista de roles (Ex: ['ADMIN', 'TESOUREIRO', 'MEMBRO'])
+    const response = await api.get<string[]>('/api/usuarios/roles'); 
+    return response.data;
+  },
 };
 

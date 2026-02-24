@@ -1,7 +1,7 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AppProvider, useApp } from './contexts/AppContext';
-import { Toaster } from 'sonner'; 
+import { Toaster } from 'sonner';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Loader } from 'lucide-react'; // Ícone para o loading
@@ -11,6 +11,7 @@ import { Loader } from 'lucide-react'; // Ícone para o loading
 import AdminLayout from './layouts/AdminLayout';
 import Navbar from './components/Navbar';
 import CookieConsent from './components/CookieConsent';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // --- COMPONENTES PESADOS (Lazy Loading) ---
 // O Vite/Webpack criará arquivos .js separados para cada um destes
@@ -33,6 +34,7 @@ const VisitorRegistrationPage = lazy(() => import('./components/VisitorRegistrat
 const MemberRegistrationPublic = lazy(() => import('./components/MemberRegistrationPublic'));
 const KidsCheckInPage = lazy(() => import('./components/KidsCheckInPage'));
 const KidsDashboardPage = lazy(() => import('./components/KidsDashboardPage'));
+const SystemUsersPage = lazy(() => import('./components/SystemUsersPage'));
 
 // Componente de carregamento elegante
 const PageLoader = () => (
@@ -59,16 +61,15 @@ const AppRoutes = () => {
   const { currentChurch, isAuthenticated, selectChurch, exitChurch, addChurchList, updateChurchList, removeChurchList, churches } = useApp();
 
   return (
-    // O Suspense é obrigatório para envolver componentes Lazy
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* --- ROTA PÚBLICA / LANDING PAGE --- */}
         <Route path="/" element={
           !currentChurch ? (
             <>
-              <ChurchSelector 
-                churches={churches} onSelect={selectChurch} onAdd={addChurchList} 
-                onEdit={updateChurchList} onDelete={removeChurchList} 
+              <ChurchSelector
+                churches={churches} onSelect={selectChurch} onAdd={addChurchList}
+                onEdit={updateChurchList} onDelete={removeChurchList}
               />
               <CookieConsent />
             </>
@@ -111,25 +112,33 @@ const AppRoutes = () => {
         <Route path="/evento/:id/inscricao" element={<EventRegistrationPage />} />
         <Route path="/minha-inscricao/:id" element={<RegistrationStatusPage />} />
 
-        {/* --- ÁREA ADMINISTRATIVA (PROTEGIDA) --- */}
-        <Route path="/admin" element={
-          !currentChurch ? <Navigate to="/" /> : !isAuthenticated ? <Navigate to="/login" /> : <AdminLayout />
-        }>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="members" element={<MembersListPage />} />
-          <Route path="members/new" element={<MemberFormPage />} />
-          <Route path="members/edit/:id" element={<MemberFormPage />} />
-          <Route path="ministries" element={<Ministries />} />
-          <Route path="small-groups" element={<SmallGroups />} />
-          <Route path="events" element={<Events isAdmin={true} />} />
-          <Route path="events/new" element={<EventFormPage />} />
-          <Route path="events/edit/:id" element={<EventFormPage />} />
-          <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
-          <Route path="financials" element={<Financials />} />
-          <Route path="visitors" element={<Visitors/>} />
-          <Route path="kids/checkin" element={<KidsCheckInPage />} />
-          <Route path="kids/dashboard" element={<KidsDashboardPage />} />
-          <Route index element={<Navigate to="dashboard" />} />
+        <Route element={<ProtectedRoute />}>
+
+          {/* --- ÁREA ADMINISTRATIVA (PROTEGIDA) --- */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="members" element={<MembersListPage />} />
+            <Route path="members/new" element={<MemberFormPage />} />
+            <Route path="members/edit/:id" element={<MemberFormPage />} />
+            <Route path="ministries" element={<Ministries />} />
+            <Route path="small-groups" element={<SmallGroups />} />
+            <Route path="events" element={<Events isAdmin={true} />} />
+            <Route path="events/new" element={<EventFormPage />} />
+            <Route path="events/edit/:id" element={<EventFormPage />} />
+            <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
+            <Route path="financials" element={<Financials />} />
+            <Route path="visitors" element={<Visitors />} />
+
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+              <Route path="users" element={<SystemUsersPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'KIDS']} />}>
+              <Route path="kids/checkin" element={<KidsCheckInPage />} />
+              <Route path="kids/dashboard" element={<KidsDashboardPage />} />
+            </Route>
+            <Route index element={<Navigate to="dashboard" />} />
+          </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

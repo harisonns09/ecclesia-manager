@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
-import { useApp } from '../contexts/AppContext'; // Importe o Hook
-import { id } from 'zod/locales';
+import { LayoutDashboard, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
+import { UserRole } from '../types'; // Importe o UserRole do seu arquivo de tipos
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,21 +12,58 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Consumindo do Contexto Global
+
   const { currentUser, logout, exitChurch } = useApp();
 
-  const menuItems = [
+  // Definição dos menus com controle de permissão (roles)
+  // Se 'roles' não for definido, todos logados podem ver
+  const menuItems = useMemo(() => [
     { id: '/admin/dashboard', label: 'Painel Geral', icon: <LayoutDashboard size={20} /> },
     { id: '/admin/members', label: 'Membros', icon: <Users size={20} /> },
     { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={20} /> },
     { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={20} /> },
     { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
-    { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={20} /> },
     { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
-    { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={20} /> },
-    { id: '/admin/kids/dashboard', label: 'Dashboard Kids', icon: <Baby size={20} /> },
-  ];
+
+    // --- ROTAS RESTRITAS ---
+    {
+      id: '/admin/financials',
+      label: 'Financeiro',
+      icon: <Wallet size={20} />,
+      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[] // Apenas estes veem
+    },
+    {
+      id: '/admin/kids/checkin',
+      label: 'Check-in Kids',
+      icon: <Baby size={20} />,
+      roles: ['ADMIN', 'KIDS'] as UserRole[]
+    },
+    {
+      id: '/admin/kids/dashboard',
+      label: 'Dashboard Kids',
+      icon: <Baby size={20} />,
+      roles: ['ADMIN', 'KIDS'] as UserRole[]
+    },
+    {
+      id: '/admin/users',
+      label: 'Usuários & Acessos',
+      icon: <Shield size={20} />,
+      roles: ['ADMIN'] as UserRole[]
+    },
+  ], []);
+
+  // Filtra os menus baseado no cargo do usuário atual
+  const visibleMenuItems = useMemo(() => {
+    if (!currentUser) return [];
+
+    return menuItems.filter(item => {
+      // Se a rota não tem restrição de roles, mostra pra todo mundo
+      if (!item.roles) return true;
+
+      // Se tem restrição, verifica se o usuário tem a role necessária
+      return item.roles.includes(currentUser.role as UserRole);
+    });
+  }, [menuItems, currentUser]);
 
   return (
     <>
@@ -66,40 +103,40 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
         {/* Navegação */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          {menuItems.map((item) => {
+          {/* MUDANÇA AQUI: Agora usamos o array filtrado 'visibleMenuItems' */}
+          {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.id;
             return (
-                <button
+              <button
                 key={item.id}
                 onClick={() => {
-                    navigate(item.id);
-                    setIsOpen(false);
+                  navigate(item.id);
+                  setIsOpen(false);
                 }}
-                className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${
-                    isActive
+                className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${isActive
                     ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1'
                     : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                }`}
-                >
+                  }`}
+              >
                 <span className={`mr-3 transition-colors ${isActive ? 'text-[#1e3a8a]' : 'text-blue-300 group-hover:text-white'}`}>
-                    {item.icon}
+                  {item.icon}
                 </span>
                 {item.label}
-                </button>
+              </button>
             );
           })}
         </nav>
 
         {/* Footer com Ações */}
         <div className="p-4 border-t border-[#3b82f6]/20 bg-[#172554]/30 space-y-2">
-          <button 
-            onClick={exitChurch} 
+          <button
+            onClick={exitChurch}
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-blue-200 rounded-xl hover:bg-white/5 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} className="mr-3" /> Trocar Igreja
           </button>
-          <button 
-            onClick={logout} 
+          <button
+            onClick={logout}
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-300 rounded-xl hover:bg-red-500/10 hover:text-red-200 transition-colors"
           >
             <LogOut size={18} className="mr-3" /> Sair do Sistema
