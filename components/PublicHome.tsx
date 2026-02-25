@@ -133,7 +133,7 @@ const PublicHome: React.FC = () => {
                     <Calendar size={40} className="mb-4 opacity-80" />
                     <span className="text-xs font-bold uppercase tracking-widest opacity-70 mb-1">Próximo</span>
                     <div className="text-5xl font-extrabold">
-                        {new Date(nextEvent.dataEvento).getDate()}
+                        {new Date(nextEvent.dataEvento + 'T00:00:00').getDate()}
                     </div>
                     <div className="text-lg font-medium opacity-90">
                         {new Date(nextEvent.dataEvento).toLocaleDateString('pt-BR', { month: 'long' })}
