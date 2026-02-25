@@ -11,6 +11,8 @@ export interface Church {
 }
 
 
+
+
 export enum MemberStatus {
   ACTIVE = 'Ativo',
   INACTIVE = 'Inativo',
@@ -177,3 +179,14 @@ export interface CheckInKids {
   alergias?: string;
   status: 'ATIVO' | 'FINALIZADO';
 }
+
+export type UserRole = 'ADMIN' | 'TESOUREIRO' | 'KIDS' | 'MEMBRO';
+
+export interface User {
+  id: string;
+  user: string;
+  password: string;
+  role: UserRole; // <-- Campo crucial!
+  igrejaId: string; // Para multi-tenancy 
+}
+

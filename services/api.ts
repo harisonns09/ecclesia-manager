@@ -1,13 +1,11 @@
 import axios from 'axios';
 import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
 
-const api = axios.create({
-  // O endereço onde seu Spring Boot está rodando
+export const api = axios.create({
   //baseURL: 'http://localhost:8080', 
   baseURL: 'https://ecclesiamanager-1098108839645.us-central1.run.app'
 });
 
-// Interceptador para adicionar o Token automaticamente em toda requisição
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('church_token');
   if (token) {
@@ -17,20 +15,12 @@ api.interceptors.request.use((config) => {
 });
 
 api.interceptors.response.use(
-  (response) => response, // Se der sucesso, só retorna
+  (response) => response,
   (error) => {
-    // Verifica se o erro é 401 (Não autorizado) ou 403 (Proibido)
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-
-      // Evita loop infinito se o erro for na própria rota de login
       if (!window.location.pathname.includes('/login')) {
         console.warn('Sessão expirada. Redirecionando para login...');
-
-        // Remove o token inválido
         localStorage.removeItem('church_token');
-
-        // Força o redirecionamento para a tela de login
-        // Usamos window.location.href para garantir um refresh limpo do estado
         window.location.href = '/login';
       }
     }
@@ -40,7 +30,6 @@ api.interceptors.response.use(
 
 export default api;
 
-// ===== AUTHENTICATION ENDPOINTS =====
 export const authApi = {
   login: async (login: string, password: string) => {
     const response = await api.post('/api/auth/login', { login, password });
@@ -52,7 +41,6 @@ export const authApi = {
   },
 };
 
-// ===== CHURCH ENDPOINTS =====
 export const churchApi = {
   getAll: async () => {
     const response = await api.get<Church[]>('/api/igrejas');
@@ -75,10 +63,7 @@ export const churchApi = {
   },
 };
 
-// ===== MEMBER ENDPOINTS =====
 export const memberApi = {
-  // Nova função paginada
-  // No seu memberApi dentro de services/api.ts
   getByChurchPaged: async (churchId: string, params: any) => {
     const response = await api.get(`/api/igrejas/${churchId}/membros/paginado`, {
       params: {
@@ -89,7 +74,7 @@ export const memberApi = {
         genero: params.gender,
       }
     });
-    return response.data; // Retorna Page<Member>
+    return response.data;
   },
 
   getByChurch: async (churchId: string) => {
@@ -106,7 +91,6 @@ export const memberApi = {
   },
 
   createPublic: async (churchId: string, memberData: any) => {
-    // Importante: O Backend precisa ter a rota /api/public/membros liberada no SecurityConfig
     const response = await api.post(`/api/public/${churchId}/membros`, {
       ...memberData,
       igrejaId: churchId
@@ -123,7 +107,6 @@ export const memberApi = {
   },
 };
 
-// ===== TRANSACTION ENDPOINTS =====
 export const transactionApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transactions`);
@@ -146,7 +129,6 @@ export const transactionApi = {
   },
 };
 
-// ===== EVENT ENDPOINTS =====
 export const eventApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Event[]>(`/api/igrejas/${churchId}/eventos`);
@@ -177,9 +159,7 @@ export const eventApi = {
     return response.data;
   },
 
-  // Solicita ao Backend que crie um link de checkout na InfinitePay
   createPaymentCheckout: async (churchId: string, eventId: string, data: { nome: string, email: string, telefone: string, cpf?: string, amount: number, numeroInscricao: string }) => {
-    // POST para o seu backend Java
     const response = await api.post<CheckoutResponse>(`/api/eventos/${eventId}/checkout`, data);
     return response.data;
   },
@@ -194,14 +174,12 @@ export const eventApi = {
   confirmPayment: async (
     eventId: string,
     registrationId: string,
-    data: { tipoValor: 'INTEGRAL' | 'PROMOCIONAL' } // Recebe o objeto do React
+    data: { tipoValor: 'INTEGRAL' | 'PROMOCIONAL' }
   ) => {
-    // Retirado o /api inicial (assumindo que o axios já tem baseURL)
     await api.put(`/api/inscricoes/confirmarPagamento/${eventId}/${registrationId}`, data);
   },
 };
 
-// ===== MINISTRY ENDPOINTS =====
 export const ministryApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Ministry[]>(`/api/igrejas/${churchId}/ministerios`);
@@ -224,7 +202,6 @@ export const ministryApi = {
   },
 };
 
-// ===== SCALE ENDPOINTS =====
 export const scaleApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Scale[]>(`/api/igrejas/${churchId}/scales`);
@@ -247,7 +224,6 @@ export const scaleApi = {
   },
 };
 
-// ===== SMALL GROUP ENDPOINTS =====
 export const smallGroupApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<SmallGroup[]>(`/api/igrejas/${churchId}/celulas`);
@@ -272,7 +248,6 @@ export const smallGroupApi = {
   },
 };
 
-// ===== PRAYER REQUEST ENDPOINTS =====
 export const prayerRequestApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<PrayerRequest[]>(`/api/igrejas/${churchId}/prayer-requests`);
@@ -303,13 +278,11 @@ export const inscricaoApi = {
 };
 
 export const financialApi = {
-  // Buscar todas as transações de uma igreja
   getByChurch: async (churchId: string) => {
     const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transacoes`);
     return response.data;
   },
 
-  // Criar uma nova transação
   create: async (churchId: string, transaction: Partial<Transaction>) => {
     const response = await api.post<Transaction>(`/api/igrejas/${churchId}/transacoes`, transaction);
     return response.data;
@@ -320,12 +293,6 @@ export const visitorApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Member[]>(`/api/igrejas/${churchId}/visitantes`);
     return response.data;
-
-    // MOCK TEMPORÁRIO PARA VOCÊ TESTAR VISUALMENTE
-    return [
-      { id: '1', churchId, name: 'Carlos Eduardo', phone: '(11) 99999-9999', visitDate: '2023-10-25', status: 'Visitante', observation: 'Veio convidado pelo Pedro.' },
-      { id: '2', churchId, name: 'Ana Clara', phone: '(11) 98888-8888', visitDate: '2023-10-20', status: 'Em Acompanhamento', observation: 'Gostou muito do louvor.' },
-    ] as any[];
   },
 
   create: async (churchId: string, visitor: any) => {
@@ -347,21 +314,61 @@ export const visitorApi = {
 };
 
 export const kidsApi = {
-  // Realizar Check-in
   checkIn: async (churchId: string, data: CheckInKidsRequest) => {
     const response = await api.post(`/api/igrejas/${churchId}/kids/checkin`, data);
     return response.data;
   },
 
-  // Listar Crianças na Sala (Para o Dashboard)
   listActive: async (churchId: string) => {
     const response = await api.get(`/api/igrejas/${churchId}/kids/ativos`);
     return response.data as CheckInKids[];
   },
 
-  // Realizar Check-out (Saída)
   checkOut: async (churchId: string, checkInId: number) => {
     await api.post(`/api/igrejas/${churchId}/kids/checkout/${checkInId}`);
   }
+};
+
+export const userApi = {
+  create: async (churchId: string, userData: any) => {
+    const payload = { ...userData, igrejaId: churchId };
+    const response = await api.post('/api/usuarios/register', payload);
+    return response.data;
+  },
+  getByChurch: async (churchId: string) => {
+    const response = await api.get(`/api/usuarios/${churchId}`);
+    return response.data;
+  },
+
+  delete: async (churchId: string, userId: string) => {
+    const response = await api.delete(`/api/usuarios/${userId}`);
+    return response.data;
+  },
+
+  update: async (churchId: string, userId: string, userData: any) => {
+    const payload = { ...userData, igrejaId: churchId };
+    const response = await api.put(`/api/usuarios/${userId}`, payload);
+    return response.data;
+  },
+
+  getRoles: async () => {
+    const response = await api.get<string[]>('/api/usuarios/roles'); 
+    return response.data;
+  },
+};
+
+// ===== REPORT/EXPORT ENDPOINTS =====
+export const reportApi = {
+  // Exportar inscritos de um evento
+  exportEventAttendees: async (eventId: string) => {
+    // Importante: responseType 'blob' para arquivos binários
+    const response = await api.get(`/api/relatorios/eventos/${eventId}/excel`, {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  // Futuramente:
+  // exportFinancials: async (churchId: string, filters: any) => { ... }
 };
 

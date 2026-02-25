@@ -4,14 +4,12 @@ import { User, Mail, Phone, MapPin, Save, ArrowLeft, Loader, CheckCircle, Star }
 import { memberApi } from '../services/api';
 import { Member, MemberStatus } from '../types';
 import ConfirmationModal from './ConfirmationModal';
-import { useApp } from '../contexts/AppContext'; // Importe o Contexto
-import { toast } from 'sonner'; // Importe o Toast
+import { useApp } from '../contexts/AppContext';
+import { toast } from 'sonner';
 
-// Não precisa mais receber props
 const MemberRegistrationPublic: React.FC = () => {
   const navigate = useNavigate();
   
-  // Consumindo a igreja do contexto (renomeando para church para manter compatibilidade com código existente)
   const { currentChurch: church } = useApp();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,7 +35,6 @@ const MemberRegistrationPublic: React.FC = () => {
     }
   }, [church]);
 
-  // --- Helpers ---
   const validateDate = (dateString: string | undefined): string | null => {
     if (!dateString) return null;
     const selectedDate = new Date(dateString);
@@ -123,7 +120,6 @@ const MemberRegistrationPublic: React.FC = () => {
     if (!church) return;
     setIsSubmitting(true);
     
-    // Toast de loading
     const toastId = toast.loading('Enviando seu cadastro...');
 
     try {
@@ -136,7 +132,7 @@ const MemberRegistrationPublic: React.FC = () => {
       await memberApi.createPublic(church.id, payload);
       
       toast.success('Cadastro realizado com sucesso!', {
-        id: toastId, // Atualiza o toast de loading
+        id: toastId,
         description: `Seus dados foram enviados para ${church.name}.`
       });
 
@@ -188,7 +184,6 @@ const MemberRegistrationPublic: React.FC = () => {
         colorClass="blue"
       />
 
-      {/* Header Público */}
       <div className="bg-[#1e3a8a] px-6 pt-10 pb-20 text-center rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
         <button onClick={() => navigate('/')} className="absolute top-6 left-6 text-white/80 hover:text-white transition-colors">
@@ -207,7 +202,6 @@ const MemberRegistrationPublic: React.FC = () => {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-8 animate-in slide-in-from-bottom-8">
           <form onSubmit={handlePreSubmit} className="space-y-8">
 
-            {/* SEÇÃO 1: DADOS PESSOAIS */}
             <div>
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                 <User size={14} className="mr-2" /> Dados Pessoais
@@ -248,7 +242,6 @@ const MemberRegistrationPublic: React.FC = () => {
               </div>
             </div>
 
-            {/* SEÇÃO 2: CONTATO E ENDEREÇO */}
             <div className="border-t border-gray-100 pt-6">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                 <MapPin size={14} className="mr-2" /> Contato e Endereço

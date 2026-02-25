@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
-import { useApp } from '../contexts/AppContext'; // Importe o Hook
-import { id } from 'zod/locales';
+import { LayoutDashboard, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
+import { useApp } from '../contexts/AppContext';
+import { UserRole } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -12,25 +12,55 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Consumindo do Contexto Global
+
   const { currentUser, logout, exitChurch } = useApp();
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     { id: '/admin/dashboard', label: 'Painel Geral', icon: <LayoutDashboard size={20} /> },
     { id: '/admin/members', label: 'Membros', icon: <Users size={20} /> },
     { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={20} /> },
     { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={20} /> },
     { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
-    { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={20} /> },
     { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
-    { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={20} /> },
-    { id: '/admin/kids/dashboard', label: 'Dashboard Kids', icon: <Baby size={20} /> },
-  ];
+
+    {
+      id: '/admin/financials',
+      label: 'Financeiro',
+      icon: <Wallet size={20} />,
+      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[]
+    },
+    {
+      id: '/admin/kids/checkin',
+      label: 'Check-in Kids',
+      icon: <Baby size={20} />,
+      roles: ['ADMIN', 'KIDS'] as UserRole[]
+    },
+    {
+      id: '/admin/kids/dashboard',
+      label: 'Dashboard Kids',
+      icon: <Baby size={20} />,
+      roles: ['ADMIN', 'KIDS'] as UserRole[]
+    },
+    {
+      id: '/admin/users',
+      label: 'Usuários & Acessos',
+      icon: <Shield size={20} />,
+      roles: ['ADMIN'] as UserRole[]
+    },
+  ], []);
+
+  const visibleMenuItems = useMemo(() => {
+    if (!currentUser) return [];
+
+    return menuItems.filter(item => {
+      if (!item.roles) return true;
+
+      return item.roles.includes(currentUser.role as UserRole);
+    });
+  }, [menuItems, currentUser]);
 
   return (
     <>
-      {/* Overlay para mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-[#0f172a]/80 z-[60] md:hidden backdrop-blur-sm transition-opacity"
@@ -39,9 +69,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       )}
 
       {/* Sidebar Container */}
+      {/* Sidebar Container */}
       <div className={`fixed inset-y-0 left-0 z-[70] w-72 bg-[#1e3a8a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col md:relative md:translate-x-0 md:z-0 md:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-        {/* Header do Usuário */}
         <div className="p-6 border-b border-[#3b82f6]/20 bg-[#172554]/50">
           <div className="flex justify-between items-center mb-6 md:hidden">
             <span className="font-bold text-white text-lg tracking-wide">Menu</span>
@@ -64,42 +94,39 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           </div>
         </div>
 
-        {/* Navegação */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          {menuItems.map((item) => {
+          {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.id;
             return (
-                <button
+              <button
                 key={item.id}
                 onClick={() => {
-                    navigate(item.id);
-                    setIsOpen(false);
+                  navigate(item.id);
+                  setIsOpen(false);
                 }}
-                className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${
-                    isActive
+                className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${isActive
                     ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1'
                     : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                }`}
-                >
+                  }`}
+              >
                 <span className={`mr-3 transition-colors ${isActive ? 'text-[#1e3a8a]' : 'text-blue-300 group-hover:text-white'}`}>
-                    {item.icon}
+                  {item.icon}
                 </span>
                 {item.label}
-                </button>
+              </button>
             );
           })}
         </nav>
 
-        {/* Footer com Ações */}
         <div className="p-4 border-t border-[#3b82f6]/20 bg-[#172554]/30 space-y-2">
-          <button 
-            onClick={exitChurch} 
+          <button
+            onClick={exitChurch}
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-blue-200 rounded-xl hover:bg-white/5 hover:text-white transition-colors"
           >
             <ArrowLeft size={18} className="mr-3" /> Trocar Igreja
           </button>
-          <button 
-            onClick={logout} 
+          <button
+            onClick={logout}
             className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-300 rounded-xl hover:bg-red-500/10 hover:text-red-200 transition-colors"
           >
             <LogOut size={18} className="mr-3" /> Sair do Sistema

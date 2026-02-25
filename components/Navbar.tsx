@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Menu, X, Home, Calendar, LogIn, ArrowLeft, LogOut, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../contexts/AppContext'; // Importe o Hook
+import { useApp } from '../contexts/AppContext';
 
-// Interface de props agora é opcional ou vazia, pois tudo vem do contexto
-// Mantive onSidebarToggle pois é uma ação de UI local entre Navbar e Layout
 interface NavbarProps {
   onSidebarToggle?: () => void;
   activeTab: string; // Mantido pois é controle de UI da página atual
@@ -16,7 +14,6 @@ const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab
 }) => {
-  // Consumindo do Contexto Global
   const { 
     isAuthenticated, 
     currentChurch, 
@@ -46,11 +43,10 @@ const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-20"> 
           
-          {/* LADO ESQUERDO */}
           <div className="flex items-center">
             {currentChurch && (
                 <button 
-                onClick={exitChurch} // Usa a função do contexto
+                onClick={exitChurch}
                 className="mr-4 p-2 rounded-full text-gray-400 hover:text-primary-900 hover:bg-primary-50 transition-all duration-200 group"
                 title="Trocar Igreja"
                 >
@@ -80,7 +76,6 @@ const Navbar: React.FC<NavbarProps> = ({
             </div>
           </div>
 
-          {/* CENTRO/DIREITA */}
           <div className="hidden md:flex md:items-center md:space-x-4">
             {navItems.map((item) => (
               <button
@@ -112,7 +107,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 </button>
 
                 <button
-                  onClick={logout} // Usa logout do contexto
+                  onClick={logout}
                   className="px-4 py-2.5 rounded-lg border border-gray-200 text-gray-600 text-sm font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors flex items-center"
                   title="Sair do sistema"
                 >
@@ -130,7 +125,6 @@ const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* MENU MOBILE TOGGLE */}
           <div className="flex items-center md:hidden">
             <button
               onClick={() => {
@@ -148,7 +142,6 @@ const Navbar: React.FC<NavbarProps> = ({
         </div>
       </div>
 
-      {/* MENU MOBILE EXPANDIDO */}
       {isOpen && !onSidebarToggle && (
         <div className="md:hidden bg-white border-t border-gray-100 animate-in slide-in-from-top-2 duration-200 shadow-xl">
           <div className="px-4 pt-3 pb-6 space-y-2">

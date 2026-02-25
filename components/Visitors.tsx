@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Phone, Calendar, Plus, Edit2, Trash2, Save, Search, HeartHandshake, CheckCircle, XCircle, X, Loader } from 'lucide-react';
+import { User, Phone, Calendar, Plus, Edit2, Trash2, Save, Search, HeartHandshake, X, Loader } from 'lucide-react';
 import { Visitor, VisitorStatus } from '../types';
 import { visitorApi } from '../services/api';
-import { useApp } from '../contexts/AppContext'; // Contexto
+import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
 
 const Visitors: React.FC = () => {
@@ -14,9 +14,12 @@ const Visitors: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const initialFormState: Partial<Visitor> = {
-    nome: '', telefone: '',
-    dataVisita: new Date().toISOString().split('T')[0],
-    dataAniversario: '', status: 'Visitante', observacao: ''
+    nome: '', 
+    telefone: '',
+    dataVisita: new Date().toISOString().split('T')[0], 
+    dataAniversario: '', 
+    status: 'Visitante', 
+    observacao: ''
   };
 
   const [formData, setFormData] = useState<Partial<Visitor>>(initialFormState);
@@ -29,8 +32,23 @@ const Visitors: React.FC = () => {
     if (!church) return;
     setIsLoading(true);
     try {
+      // Forçamos a tipagem aqui ou garantimos que visitorApi retorne Visitor[]
       const data = await visitorApi.getByChurch(church.id);
-      setVisitors(Array.isArray(data) ? data : []);
+      
+      // Verificação de segurança: se vier 'Member', mapeamos para 'Visitor'
+      // Isso corrige o erro de tipagem caso a API esteja retornando tipos mistos
+      const safeVisitors: Visitor[] = Array.isArray(data) ? data.map((item: any) => ({
+        id: item.id,
+        churchId: church.id, // Garante que tem o ID da igreja
+        nome: item.nome || 'Sem Nome',
+        telefone: item.telefone || '',
+        dataVisita: item.dataVisita || new Date().toISOString(), // Fallback para hoje se não tiver data
+        dataAniversario: item.dataAniversario,
+        status: item.status || 'Visitante',
+        observacao: item.observation || item.observacao // Tenta pegar de 'observation' ou 'observacao'
+      })) : [];
+
+      setVisitors(safeVisitors);
     } catch (error) {
       console.error("Erro ao carregar visitantes:", error);
       toast.error("Erro ao carregar lista de visitantes.");
@@ -47,16 +65,37 @@ const Visitors: React.FC = () => {
     const toastId = toast.loading(editingId ? "Atualizando..." : "Salvando...");
     try {
       if (editingId) {
-        const updated = await visitorApi.update(church.id, editingId, formData);
-        setVisitors(prev => prev.map(v => v.id === editingId ? updated : v));
+        await visitorApi.update(church.id, editingId, formData);
+        
+        // Atualiza a lista localmente para evitar reload
+        setVisitors(prev => prev.map(v => 
+          v.id === editingId ? { ...v, ...formData } as Visitor : v
+        ));
+        
         toast.success("Visitante atualizado!", { id: toastId });
       } else {
-        const created = await visitorApi.create(church.id, formData);
-        setVisitors(prev => [created, ...prev]);
+        // Criar novo
+        const payload = { ...formData, churchId: church.id };
+        const created = await visitorApi.create(church.id, payload);
+        
+        // Adiciona à lista. Se a API não devolver o objeto completo, montamos um temporário
+        const newVisitor: Visitor = {
+            id: created?.id || Date.now().toString(),
+            churchId: church.id,
+            nome: formData.nome || '',
+            telefone: formData.telefone || '',
+            dataVisita: formData.dataVisita || new Date().toISOString(),
+            status: formData.status as VisitorStatus || 'Visitante',
+            dataAniversario: formData.dataAniversario,
+            observacao: formData.observacao
+        };
+
+        setVisitors(prev => [newVisitor, ...prev]);
         toast.success("Visitante cadastrado!", { id: toastId });
       }
       resetForm();
     } catch (error) {
+      console.error(error);
       toast.error("Erro ao salvar dados.", { id: toastId });
     }
   };
@@ -81,7 +120,7 @@ const Visitors: React.FC = () => {
         nome: visitor.nome || '',
         telefone: visitor.telefone || '',
         dataVisita: visitor.dataVisita ? visitor.dataVisita.split('T')[0] : '',
-        dataAniversario: visitor.dataAniversario || '',
+        dataAniversario: visitor.dataAniversario ? visitor.dataAniversario.split('T')[0] : '', // Garante formato YYYY-MM-DD
         status: visitor.status || 'Visitante',
         observacao: visitor.observacao || ''
     });

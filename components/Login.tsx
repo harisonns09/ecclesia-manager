@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
 import { Lock, User, ArrowLeft, Loader, Church } from 'lucide-react';
-import { authApi } from '../services/api';
-import { useApp } from '../contexts/AppContext'; // Contexto
+import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
 
-// Props simplificadas: apenas onBack, pois o login é global
 interface LoginProps {
   onBack: () => void;
-  // onLogin removido (agora via contexto)
 }
 
 const Login: React.FC<LoginProps> = ({ onBack }) => {
-  const { login: performLogin } = useApp(); // Função de login do contexto
+  const { login: performLogin } = useApp(); 
 
   const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
@@ -22,22 +19,9 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
     setIsLoading(true);
 
     try {
-      const data = await authApi.login(loginInput, password);
-      const token = data.token;
+      await performLogin(loginInput, password);
+      toast.success("Bem-vindo de volta!");
 
-      if (token) {
-        localStorage.setItem('church_token', token);
-        const userData = {
-            name: data.nome || loginInput.split('@')[0],
-            email: loginInput,
-            role: 'ADMIN' // ou vir do backend
-        };
-        
-        toast.success("Bem-vindo de volta!");
-        performLogin(userData); // Chama a função do contexto que redireciona
-      } else {
-        toast.error('Token inválido recebido do servidor.');
-      }
     } catch (err) {
       console.error(err);
       toast.error('Falha no login. Verifique suas credenciais.');
