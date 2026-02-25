@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { UserRole } from '../types'; // Importe o UserRole do seu arquivo de tipos
+import { UserRole } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -15,8 +15,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
   const { currentUser, logout, exitChurch } = useApp();
 
-  // Definição dos menus com controle de permissão (roles)
-  // Se 'roles' não for definido, todos logados podem ver
   const menuItems = useMemo(() => [
     { id: '/admin/dashboard', label: 'Painel Geral', icon: <LayoutDashboard size={20} /> },
     { id: '/admin/members', label: 'Membros', icon: <Users size={20} /> },
@@ -25,12 +23,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
     { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
 
-    // --- ROTAS RESTRITAS ---
     {
       id: '/admin/financials',
       label: 'Financeiro',
       icon: <Wallet size={20} />,
-      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[] // Apenas estes veem
+      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[]
     },
     {
       id: '/admin/kids/checkin',
@@ -52,22 +49,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
     },
   ], []);
 
-  // Filtra os menus baseado no cargo do usuário atual
   const visibleMenuItems = useMemo(() => {
     if (!currentUser) return [];
 
     return menuItems.filter(item => {
-      // Se a rota não tem restrição de roles, mostra pra todo mundo
       if (!item.roles) return true;
 
-      // Se tem restrição, verifica se o usuário tem a role necessária
       return item.roles.includes(currentUser.role as UserRole);
     });
   }, [menuItems, currentUser]);
 
   return (
     <>
-      {/* Overlay para mobile */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-[#0f172a]/80 z-[60] md:hidden backdrop-blur-sm transition-opacity"
@@ -76,9 +69,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       )}
 
       {/* Sidebar Container */}
+      {/* Sidebar Container */}
       <div className={`fixed inset-y-0 left-0 z-[70] w-72 bg-[#1e3a8a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col md:relative md:translate-x-0 md:z-0 md:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-        {/* Header do Usuário */}
         <div className="p-6 border-b border-[#3b82f6]/20 bg-[#172554]/50">
           <div className="flex justify-between items-center mb-6 md:hidden">
             <span className="font-bold text-white text-lg tracking-wide">Menu</span>
@@ -101,9 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           </div>
         </div>
 
-        {/* Navegação */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-          {/* MUDANÇA AQUI: Agora usamos o array filtrado 'visibleMenuItems' */}
           {visibleMenuItems.map((item) => {
             const isActive = location.pathname === item.id;
             return (
@@ -127,7 +118,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
           })}
         </nav>
 
-        {/* Footer com Ações */}
         <div className="p-4 border-t border-[#3b82f6]/20 bg-[#172554]/30 space-y-2">
           <button
             onClick={exitChurch}

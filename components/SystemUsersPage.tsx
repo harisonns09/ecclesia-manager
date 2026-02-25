@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { useApp } from '../contexts/AppContext';
 import { userApi } from '../services/api';
 
-// ZOD: A senha é opcional na edição. Validamos a obrigatoriedade na criação via código.
 const userSchema = z.object({
   user: z.string().min(3, "O login deve ter pelo menos 3 caracteres"),
   password: z.string().optional(),
@@ -17,7 +16,6 @@ const userSchema = z.object({
 
 type UserFormData = z.infer<typeof userSchema>;
 
-// Tipo para a listagem da tabela
 interface SystemUser {
   id: string;
   user: string; // ou username, dependendo de como seu backend retorna
@@ -28,11 +26,9 @@ const SystemUsersPage: React.FC = () => {
   const { currentChurch } = useApp();
   const queryClient = useQueryClient();
 
-  // --- CONTROLE DE TELAS ---
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
 
-  // --- QUERIES ---
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
     queryKey: ['userRoles'],
     queryFn: userApi.getRoles,
@@ -45,12 +41,12 @@ const SystemUsersPage: React.FC = () => {
     enabled: !!currentChurch,
   });
 
-  // --- FORMULÁRIO ---
   const { register, handleSubmit, reset, setError, formState: { errors } } = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
     defaultValues: { user: '', password: '', role: '' }
   });
 
+  // Preenche o formulário quando clica em Editar
   // Preenche o formulário quando clica em Editar
   useEffect(() => {
     if (editingUser) {
@@ -60,7 +56,6 @@ const SystemUsersPage: React.FC = () => {
     }
   }, [editingUser, reset]);
 
-  // --- MUTATIONS (SALVAR, EDITAR, EXCLUIR) ---
   const saveUserMutation = useMutation({
     mutationFn: (data: UserFormData) => {
       if (editingUser) {
@@ -87,11 +82,9 @@ const SystemUsersPage: React.FC = () => {
     onError: () => toast.error("Erro ao excluir usuário.")
   });
 
-  // --- AÇÕES ---
   const onSubmit = (data: UserFormData) => {
     if (!currentChurch) return;
 
-    // Se estiver criando um NOVO usuário, a senha é obrigatória
     if (!editingUser && (!data.password || data.password.length < 6)) {
       setError('password', { message: 'A senha deve ter pelo menos 6 caracteres' });
       return;
@@ -129,7 +122,7 @@ const SystemUsersPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto animate-in fade-in duration-500 pb-12">
       
-      {/* HEADER */}
+
       <div className="mb-8 border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-[#0f172a] mb-1 flex items-center gap-2">
@@ -140,7 +133,6 @@ const SystemUsersPage: React.FC = () => {
           </p>
         </div>
 
-        {/* Botões do Header */}
         {!isFormOpen ? (
           <button onClick={openNewForm} className="btn-primary flex items-center gap-2">
             <Plus size={20} /> Novo Acesso
@@ -155,7 +147,6 @@ const SystemUsersPage: React.FC = () => {
       {/* CONDICIONAL: LISTA OU FORMULÁRIO */}
       {!isFormOpen ? (
         
-        /* --- VISÃO DE LISTA (TABELA) --- */
         <div className="premium-card overflow-hidden">
           {isLoadingUsers ? (
             <div className="p-12 text-center text-gray-500 flex flex-col items-center">
@@ -222,7 +213,6 @@ const SystemUsersPage: React.FC = () => {
 
       ) : (
 
-        /* --- VISÃO DE FORMULÁRIO --- */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in slide-in-from-right-8 duration-300">
           
           <div className="lg:col-span-2">
@@ -233,7 +223,6 @@ const SystemUsersPage: React.FC = () => {
               </h2>
 
               <div className="space-y-4">
-                {/* LOGIN */}
                 <div>
                   <label className="label-field">Login / E-mail</label>
                   <div className="relative">
@@ -249,7 +238,6 @@ const SystemUsersPage: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* SENHA */}
                   <div>
                     <label className="label-field">
                       {editingUser ? 'Nova Senha (Opcional)' : 'Senha Temporária'}
@@ -266,7 +254,6 @@ const SystemUsersPage: React.FC = () => {
                     {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
                   </div>
 
-                  {/* ROLE */}
                   <div>
                     <label className="label-field">Nível de Acesso (Cargo)</label>
                     <select 
@@ -298,7 +285,6 @@ const SystemUsersPage: React.FC = () => {
             </form>
           </div>
 
-          {/* Sidebar Informativa */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-blue-50 p-6 rounded-2xl border border-blue-100">
               <h3 className="font-bold text-[#1e3a8a] mb-3 flex items-center gap-2">

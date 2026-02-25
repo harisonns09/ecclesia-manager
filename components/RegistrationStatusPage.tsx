@@ -5,13 +5,12 @@ import {
   User, ArrowLeft, Loader, CreditCard, ChevronRight, AlertTriangle 
 } from 'lucide-react';
 import { inscricaoApi, eventApi } from '../services/api';
-import { toast } from 'sonner'; // Toast
+import { toast } from 'sonner';
 
 const RegistrationStatusPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   
-  // Estados
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -85,8 +84,6 @@ const RegistrationStatusPage: React.FC = () => {
     }
   };
 
-  // --- SUB-COMPONENTES DE UI ---
-
   const renderStatusBadgeMin = (status: string) => {
       switch (status) {
           case 'PAGO': return <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">PAGO</span>;
@@ -145,7 +142,6 @@ const RegistrationStatusPage: React.FC = () => {
     </div>
   );
 
-  // CASO 1: Lista de Inscrições
   if (!selectedRegistration && registrations.length > 0) {
       return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 font-sans animate-in fade-in">
@@ -185,13 +181,11 @@ const RegistrationStatusPage: React.FC = () => {
       );
   }
 
-  // CASO 2: Detalhes da Inscrição Selecionada
   if (selectedRegistration) {
       return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 font-sans animate-in slide-in-from-right">
           <div className="max-w-xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 relative">
             
-            {/* Botão Voltar (se houver lista) */}
             {registrations.length > 1 && (
                 <button 
                     onClick={() => setSelectedRegistration(null)}
@@ -202,7 +196,6 @@ const RegistrationStatusPage: React.FC = () => {
                 </button>
             )}
 
-            {/* Header Status */}
             <div className={`p-10 text-center border-b ${
                 selectedRegistration.status === 'PAGO' ? 'bg-emerald-50/50 border-emerald-100' 
                 : selectedRegistration.status === 'PENDENTE' ? 'bg-orange-50/50 border-orange-100' 
@@ -211,10 +204,8 @@ const RegistrationStatusPage: React.FC = () => {
                {renderStatusFull(selectedRegistration.status)}
             </div>
 
-            {/* Detalhes */}
             <div className="p-8 space-y-8">
                 
-                {/* Evento Info */}
                 <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200 relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                         <Calendar size={80} />
@@ -228,7 +219,6 @@ const RegistrationStatusPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Participante Info */}
                 <div className="flex items-start space-x-4 p-2">
                     <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-[#1e3a8a] border border-blue-100 flex-shrink-0">
                         <User size={24} />
@@ -241,7 +231,6 @@ const RegistrationStatusPage: React.FC = () => {
                     </div>
                 </div>
 
-                {/* ID da Transação */}
                 <div className="pt-6 border-t border-gray-100 flex justify-between items-center text-sm">
                     <span className="text-gray-500 font-medium">Código da Inscrição</span>
                     <span className="font-mono bg-gray-100 px-3 py-1.5 rounded-lg text-gray-700 border border-gray-200 font-bold select-all">
@@ -249,7 +238,6 @@ const RegistrationStatusPage: React.FC = () => {
                     </span>
                 </div>
 
-                {/* Ações */}
                 <div className="pt-2 space-y-3">
                     {selectedRegistration.status === 'Pendente' && (
                         <button 

@@ -10,7 +10,6 @@ import ConfirmationModal from './ConfirmationModal';
 import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
 
-// Importamos o Schema e o Tipo que criamos anteriormente
 import { memberSchema, MemberFormData } from '../schemas/memberSchema';
 
 const MemberFormPage: React.FC = () => {
@@ -24,7 +23,6 @@ const MemberFormPage: React.FC = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [tempData, setTempData] = useState<MemberFormData | null>(null);
 
-    // 1. Inicialização do React Hook Form
     const {
         register,
         handleSubmit,
@@ -41,7 +39,6 @@ const MemberFormPage: React.FC = () => {
         }
     });
 
-    // 2. Carregar dados para edição
     useEffect(() => {
         if (church && isEditing) {
             loadMemberData();
@@ -54,7 +51,6 @@ const MemberFormPage: React.FC = () => {
         try {
             const member = await memberApi.getById(church.id, id!);
             if (member) {
-                // O reset preenche todos os campos do formulário automaticamente
                 reset(member as unknown as MemberFormData);
             } else {
                 toast.error("Membro não encontrado");
@@ -67,7 +63,6 @@ const MemberFormPage: React.FC = () => {
         }
     };
 
-    // 3. Lógica do CEP (usando setValue para atualizar o formulário)
     const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
         const cep = e.target.value.replace(/\D/g, '');
         if (cep.length === 8) {
@@ -90,7 +85,6 @@ const MemberFormPage: React.FC = () => {
         }
     };
 
-    // 4. Formatação de Telefone em Tempo Real
     const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         let v = e.target.value.replace(/\D/g, '').substring(0, 11);
         if (v.length > 10) v = v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
@@ -99,13 +93,11 @@ const MemberFormPage: React.FC = () => {
         e.target.value = v;
     };
 
-    // 5. Validação passou: abre o modal de confirmação
     const onPreSubmit = (data: MemberFormData) => {
         setTempData(data);
         setIsModalOpen(true);
     };
 
-    // 6. Confirmação do Modal: Salva no Banco
     const handleConfirmSave = async () => {
         if (!church || !tempData) return;
 
@@ -113,7 +105,7 @@ const MemberFormPage: React.FC = () => {
 
         const payload = {
             ...tempData,
-            id: id || '', // Se for novo, id vazio ou gerado pelo banco
+            id: id || '',
             igrejaId: church.id
         } as Member;
 
@@ -169,7 +161,6 @@ const MemberFormPage: React.FC = () => {
                 </div>
 
                 <div className="p-8 space-y-8">
-                    {/* Seção 1: Dados Pessoais */}
                     <div>
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                             <User size={16} className="mr-2" /> Dados Pessoais
@@ -206,7 +197,6 @@ const MemberFormPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Seção 2: Contato e Endereço */}
                     <div className="border-t border-gray-100 pt-6">
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                             <MapPin size={16} className="mr-2" /> Contato e Endereço
@@ -260,7 +250,6 @@ const MemberFormPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Seção 3: Dados Eclesiásticos */}
                     <div className="border-t border-gray-100 pt-6">
                         <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 flex items-center">
                             <ChurchIcon size={16} className="mr-2" /> Vida Eclesiástica

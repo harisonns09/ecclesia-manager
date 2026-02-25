@@ -27,13 +27,10 @@ const Events: React.FC<EventsProps> = ({
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchId, setSearchId] = useState('');
 
-  // Se propEvents for passado, usa ele. Se não, usa internalEvents.
-  // Importante: Verificamos se propEvents é undefined, pois um array vazio [] é um valor válido.
   const isUsingProps = propEvents !== undefined;
   const displayEvents = isUsingProps ? propEvents : internalEvents;
 
   useEffect(() => {
-    // Só carrega internamente se NÃO estiver usando props e tiver uma igreja selecionada
     if (!isUsingProps && church?.id) {
       loadEvents();
     }
@@ -51,7 +48,6 @@ const Events: React.FC<EventsProps> = ({
       
       setInternalEvents(sorted);
       
-      // Se a função de setEvents do pai foi passada (mesmo sem o array de events), atualizamos ela também
       if (propSetEvents) propSetEvents(sorted);
       
     } catch (err) {

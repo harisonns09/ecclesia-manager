@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, User, ArrowLeft, Loader, Church } from 'lucide-react';
-import { useApp } from '../contexts/AppContext'; // Contexto
+import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
 
 interface LoginProps {
@@ -8,7 +8,6 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onBack }) => {
-  // Pega a função 'login' diretamente do AppContext
   const { login: performLogin } = useApp(); 
 
   const [loginInput, setLoginInput] = useState('');
@@ -20,8 +19,6 @@ const Login: React.FC<LoginProps> = ({ onBack }) => {
     setIsLoading(true);
 
     try {
-      // Passa a responsabilidade inteira para o Contexto
-      // Ele vai chamar a API, guardar o Token, decodificar a Role e redirecionar a tela
       await performLogin(loginInput, password);
       toast.success("Bem-vindo de volta!");
 

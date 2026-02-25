@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Download, CheckCircle, Clock, XCircle, AlertCircle, Loader, CheckSquare, DollarSign } from 'lucide-react';
-import { eventApi } from '../services/api';
+import { eventApi, reportApi } from '../services/api';
 import ConfirmationModal from './ConfirmationModal';
 import { useApp } from '../contexts/AppContext'; 
 import { toast } from 'sonner';
@@ -16,10 +16,10 @@ const EventAttendeesPage: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Estado do Modal e Seleção de Pagamento
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedAttendee, setSelectedAttendee] = useState<any>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
     const [paymentType, setPaymentType] = useState<'INTEGRAL' | 'PROMOCIONAL'>('INTEGRAL'); 
 
     useEffect(() => {
@@ -54,34 +54,65 @@ const EventAttendeesPage: React.FC = () => {
         })
         .sort((a, b) => {
             const statusWeight: Record<string, number> = {
-                'PENDENTE': 1,
-                'PAGO': 2,
-                'CANCELADO': 3
+                'PENDENTE': 1, 'PAGO': 2, 'CANCELADO': 3
             };
-
             const statusA = a.status?.toUpperCase() || '';
             const statusB = b.status?.toUpperCase() || '';
-
             const weightA = statusWeight[statusA] || 99;
             const weightB = statusWeight[statusB] || 99;
 
-            if (weightA !== weightB) {
-                return weightA - weightB;
-            }
+            if (weightA !== weightB) return weightA - weightB;
             return (a.nome || '').localeCompare(b.nome || '');
         });
 
     const totalRevenue = attendees.reduce((acc, att) => {
         if (att.status?.toLowerCase() === 'pago') {
-            // Usa o valor específico salvo na inscrição, ou o valor integral como fallback
             const valorCalculado = att.tipoPagamentoSelecionado === 'PROMOCIONAL' || att.valorPago === event?.precoPromocional
                 ? Number(event?.precoPromocional) 
                 : Number(event?.preco);
-                
             return acc + (valorCalculado || 0);
         }
         return acc;
     }, 0);
+
+    const handleExportExcel = async () => {
+        if (!id) return;
+        
+        setIsDownloading(true);
+        const toastId = toast.loading("Gerando planilha no servidor...");
+
+        try {
+            const response = await reportApi.exportEventAttendees(id);
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const contentDisposition = response.headers['content-disposition'];
+            let fileName = `inscritos_evento_${id}.xlsx`;
+            
+            if (contentDisposition) {
+                const fileNameMatch = contentDisposition.match(/filename="?(.+)"?/);
+                if (fileNameMatch && fileNameMatch.length === 2)
+                    fileName = fileNameMatch[1];
+            }
+            
+            link.setAttribute('download', fileName);
+            document.body.appendChild(link);
+            
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            
+            toast.success("Download iniciado!", { id: toastId });
+
+        } catch (error) {
+            console.error("Erro no download", error);
+            toast.error("Erro ao gerar o relatório. Tente novamente.", { id: toastId });
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     const openConfirmModal = (attendee: any) => {
         setSelectedAttendee(attendee);
@@ -132,7 +163,6 @@ const EventAttendeesPage: React.FC = () => {
     if (isLoading) return <div className="flex justify-center py-20"><Loader className="animate-spin text-[#1e3a8a]" size={40} /></div>;
     if (!event) return <div className="p-12 text-center text-gray-500 font-medium">Evento não encontrado.</div>;
 
-    // --- Lógica de Preços para o Modal ---
     const hasPromo = event?.precoPromocional && Number(event?.precoPromocional) > 0;
     const precoIntegral = Number(event?.preco) || 0;
 
@@ -146,48 +176,38 @@ const EventAttendeesPage: React.FC = () => {
                 title="Confirmar Pagamento Manual"
                 description={
                     <div className="space-y-4 text-left text-gray-700">
-                        <p>
-                            Confirme o recebimento do pagamento para <strong>{selectedAttendee?.nome}</strong>.
-                        </p>
+                        <p>Confirme o recebimento do pagamento para <strong>{selectedAttendee?.nome}</strong>.</p>
                         
                         <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-3">
                             <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Valor Recebido</p>
                             
                             {hasPromo ? (
-                                // SE O EVENTO TEM PROMOÇÃO: Exibe Radio Buttons
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer transition-colors border border-transparent hover:border-gray-200">
                                         <input 
-                                            type="radio" 
-                                            name="paymentType" 
-                                            value="INTEGRAL"
+                                            type="radio" name="paymentType" value="INTEGRAL"
                                             checked={paymentType === 'INTEGRAL'}
                                             onChange={() => setPaymentType('INTEGRAL')}
                                             className="w-4 h-4 text-emerald-600 border-gray-300 focus:ring-emerald-500"
                                         />
                                         <span className="font-medium">
-                                            Valor Integral 
-                                            <span className="text-gray-500 ml-1">(R$ {precoIntegral.toFixed(2)})</span>
+                                            Valor Integral <span className="text-gray-500 ml-1">(R$ {precoIntegral.toFixed(2)})</span>
                                         </span>
                                     </label>
 
                                     <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer transition-colors border border-transparent hover:border-gray-200">
                                         <input 
-                                            type="radio" 
-                                            name="paymentType" 
-                                            value="PROMOCIONAL"
+                                            type="radio" name="paymentType" value="PROMOCIONAL"
                                             checked={paymentType === 'PROMOCIONAL'}
                                             onChange={() => setPaymentType('PROMOCIONAL')}
                                             className="w-4 h-4 text-[#1e3a8a] border-gray-300 focus:ring-[#1e3a8a]"
                                         />
                                         <span className="font-medium text-[#1e3a8a]">
-                                            Valor Promocional 
-                                            <span className="text-gray-500 ml-1 text-sm">(R$ {Number(event.precoPromocional).toFixed(2)})</span>
+                                            Valor Promocional <span className="text-gray-500 ml-1 text-sm">(R$ {Number(event.precoPromocional).toFixed(2)})</span>
                                         </span>
                                     </label>
                                 </div>
                             ) : (
-                                // SE NÃO TEM PROMOÇÃO: Exibe apenas o valor fixo
                                 <div className="p-2 bg-white rounded border border-gray-100 flex items-center justify-between">
                                     <span className="font-medium text-gray-600">Valor Único:</span>
                                     <span className="text-lg font-bold text-emerald-600">
@@ -232,8 +252,13 @@ const EventAttendeesPage: React.FC = () => {
                         Recebido: R$ {totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </div>
 
-                    <button className="p-2.5 text-gray-500 hover:text-[#1e3a8a] hover:bg-white border border-gray-200 rounded-lg shadow-sm transition-all bg-white" title="Exportar CSV">
-                        <Download size={20} />
+                    <button 
+                        onClick={handleExportExcel}
+                        disabled={isDownloading}
+                        className="p-2.5 text-gray-500 hover:text-[#1e3a8a] hover:bg-white border border-gray-200 rounded-lg shadow-sm transition-all bg-white disabled:opacity-50 disabled:cursor-not-allowed" 
+                        title="Exportar para Excel"
+                    >
+                        {isDownloading ? <Loader className="animate-spin" size={20} /> : <Download size={20} />}
                     </button>
                 </div>
             </div>
