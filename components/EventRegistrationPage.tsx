@@ -297,7 +297,7 @@ const EventRegistrationPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto py-8 px-4 animate-in fade-in">
-      <button onClick={() => navigate('/')} className="flex items-center text-gray-500 mb-6 hover:text-[#1e3a8a] transition-colors font-medium">
+      <button onClick={() => navigate('/eventos')} className="flex items-center text-gray-500 mb-6 hover:text-[#1e3a8a] transition-colors font-medium">
         <ArrowLeft size={20} className="mr-2" /> Voltar
       </button>
 
@@ -314,7 +314,7 @@ const EventRegistrationPage: React.FC = () => {
                 <Calendar size={20} className="mr-3 text-[#1e3a8a] flex-shrink-0" />
                 <div>
                   <p className="font-semibold text-gray-900">Data</p>
-                  <span>{new Date(event.dataEvento).toLocaleDateString('pt-BR')}</span>
+                  <span>{new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR') + ''}</span>
                 </div>
               </div>
               <div className="flex items-start">
