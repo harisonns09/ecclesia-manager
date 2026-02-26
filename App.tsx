@@ -35,6 +35,7 @@ const MemberRegistrationPublic = lazy(() => import('./components/MemberRegistrat
 const KidsCheckInPage = lazy(() => import('./components/KidsCheckInPage'));
 const KidsDashboardPage = lazy(() => import('./components/KidsDashboardPage'));
 const SystemUsersPage = lazy(() => import('./components/SystemUsersPage'));
+const AuditLogPage = lazy(() => import('./components/AuditLogPage'));
 
 // Componente de carregamento elegante
 const PageLoader = () => (
@@ -91,8 +92,7 @@ const AppRoutes = () => {
 
         {/* --- CADASTROS PÚBLICOS --- */}
         <Route path="/cadastro" element={!currentChurch ? <Navigate to="/" /> : <MemberRegistrationPublic />} />
-        <Route path="/visitor" element={!currentChurch ? <Navigate to="/" /> : <VisitorRegistrationPage />} />
-
+        <Route path="/:churchId/visitor" element={<VisitorRegistrationPage />} />
         {/* --- EVENTOS PÚBLICOS --- */}
         <Route path="/eventos" element={
           !currentChurch ? <Navigate to="/" /> : (
@@ -131,6 +131,7 @@ const AppRoutes = () => {
 
             <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
               <Route path="users" element={<SystemUsersPage />} />
+              <Route path="audit-log" element={<AuditLogPage />} />
             </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'KIDS']} />}>

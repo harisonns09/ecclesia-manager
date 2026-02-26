@@ -1,34 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { User, Phone, Mail, Calendar, HeartHandshake, ArrowLeft, Send, Star, MessageCircle, AlertCircle, Loader } from 'lucide-react';
-import { visitorApi } from '../services/api';
-import { Member, MemberStatus } from '../types';
+import { visitorApi, churchApi } from '../services/api'; // Importamos churchApi
+import { Member, MemberStatus, Church } from '../types';
 import ConfirmationModal from './ConfirmationModal';
-import { useApp } from '../contexts/AppContext'; // Contexto
 import { toast } from 'sonner';
 
 const VisitorRegistrationPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentChurch: church } = useApp(); // Pegando da App
+  // Pega o ID da URL. Ex: site.com/1/visitor -> churchId = "1"
+  const { churchId } = useParams<{ churchId: string }>(); 
+  
+  const [church, setChurch] = useState<Church | null>(null);
+  const [isLoadingChurch, setIsLoadingChurch] = useState(true);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const [formData, setFormData] = useState<Omit<Member, 'id'>>({
-    igrejaId: church?.id || '',
+  const [formData, setFormData] = useState<Partial<Member>>({
     nome: '', telefone: '', email: '', dataNascimento: '',
     status: MemberStatus.VISITOR, ministerio: '', genero: '', estadoCivil: '',
     cep: '', endereco: '', numero: '', bairro: '', cidade: '', estado: '',
     dataBatismo: '', observacao: ''
   });
 
+  // Busca a igreja assim que a página carrega usando o ID da URL
   useEffect(() => {
-    if (church) {
-      setFormData(prev => ({ ...prev, igrejaId: church.id }));
-    }
-  }, [church]);
+    const loadChurch = async () => {
+      if (!churchId) return;
+      try {
+        const churchData = await churchApi.getPublicById(churchId);
+        setChurch(churchData);
+        setFormData(prev => ({ ...prev, igrejaId: churchId }));
+      } catch (error) {
+        console.error("Igreja não encontrada", error);
+        toast.error("Link inválido ou igreja não encontrada.");
+      } finally {
+        setIsLoadingChurch(false);
+      }
+    };
+
+    loadChurch();
+  }, [churchId]);
 
   const validateDate = (dateString: string | undefined): string | null => {
     if (!dateString) return null;
@@ -70,16 +85,16 @@ const VisitorRegistrationPage: React.FC = () => {
   };
 
   const handleConfirmAction = async () => {
-    if (!church) return;
+    if (!church || !churchId) return;
     setIsSubmitting(true);
     const toastId = toast.loading("Enviando cartão...");
     try {
       const payload = {
         ...formData,
-        igrejaId: church.id,
-        telefone: formData.telefone.replace(/\D/g, ''),
+        igrejaId: churchId,
+        telefone: formData.telefone?.replace(/\D/g, ''),
       };
-      await visitorApi.create(church.id, payload);
+      await visitorApi.create(churchId, payload);
       toast.success("Dados enviados! Bem-vindo.", { id: toastId });
       setIsModalOpen(false);
       setIsSuccess(true);
@@ -91,8 +106,28 @@ const VisitorRegistrationPage: React.FC = () => {
     }
   };
 
-  if (!church) return <div className="p-20 text-center flex flex-col items-center"><Loader className="animate-spin text-blue-600 mb-4" /> Carregando igreja...</div>;
+  // ESTADOS DE CARREGAMENTO E ERRO
+  if (isLoadingChurch) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <Loader className="animate-spin text-blue-600 mb-4" size={40} />
+        <p className="text-gray-500 font-medium">Carregando formulário...</p>
+      </div>
+    );
+  }
 
+  if (!church) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4 text-center">
+        <AlertCircle className="text-red-500 mb-4" size={64} />
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Ops! Link Inválido</h2>
+        <p className="text-gray-600 mb-6">Não conseguimos encontrar a igreja solicitada.</p>
+        <button onClick={() => navigate('/')} className="btn-primary px-8">Voltar ao Início</button>
+      </div>
+    );
+  }
+
+  // TELA DE SUCESSO
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 animate-in zoom-in-95 duration-500">
@@ -100,12 +135,13 @@ const VisitorRegistrationPage: React.FC = () => {
           <div className="w-24 h-24 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm"><HeartHandshake size={48} className="text-emerald-600" /></div>
           <h2 className="text-3xl font-bold text-[#0f172a] mb-4">Seja Bem-vindo!</h2>
           <p className="text-gray-600 mb-8 text-lg leading-relaxed">Ficamos felizes com sua presença na <strong>{church.name}</strong>.<br />Nossa equipe entrará em contato em breve.</p>
-          <button onClick={() => navigate('/')} className="w-full py-4 bg-[#1e3a8a] text-white rounded-xl font-bold hover:bg-[#172554] transition-all shadow-lg">Voltar ao Início</button>
+          <button onClick={() => window.location.reload()} className="w-full py-4 bg-[#1e3a8a] text-white rounded-xl font-bold hover:bg-[#172554] transition-all shadow-lg">Preencher Novo Cartão</button>
         </div>
       </div>
     );
   }
 
+  // TELA DO FORMULÁRIO
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
       <ConfirmationModal
@@ -116,14 +152,16 @@ const VisitorRegistrationPage: React.FC = () => {
       />
       <div className="bg-[#1e3a8a] px-6 pt-12 pb-24 text-center rounded-b-[3rem] shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-        <button onClick={() => navigate('/')} className="absolute top-6 left-6 text-white/80 hover:text-white transition-colors"><ArrowLeft size={24} /></button>
         <div className="relative z-10">
-          <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg"><Star size={32} className="text-yellow-400 fill-yellow-400" /></div>
-          <h1 className="text-2xl font-bold text-white mb-2">Cartão de Visitante</h1>
-          <p className="text-blue-200 text-sm">Preencha seus dados para mantermos contato.</p>
+          <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20 shadow-lg">
+            <Star size={32} className="text-yellow-400 fill-yellow-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">Cartão de Visitante</h1>
+          <p className="text-blue-200 text-sm font-medium">{church.name}</p>
         </div>
       </div>
-      <div className="max-w-lg mx-auto px-4 -mt-16 relative z-20 pb-12">
+      
+      <div className="max-w-lg mx-auto px-4 -mt-12 relative z-20 pb-12">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-6 md:p-8 animate-in slide-in-from-bottom-8 duration-700">
           <form onSubmit={handleFormSubmit} className="space-y-5">
             <div className="space-y-1.5">
