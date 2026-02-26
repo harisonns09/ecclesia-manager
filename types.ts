@@ -190,3 +190,26 @@ export interface User {
   igrejaId: string; // Para multi-tenancy 
 }
 
+export interface AuditLogEntry {
+  id: number;
+  action: string;
+  entityName: string;
+  username: string;
+  details: string;
+  timestamp: string;
+  churchId: number;
+}
+
+export interface SpringPage<T> {
+  content: T[];
+  totalPages: number;
+  totalElements: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+
+

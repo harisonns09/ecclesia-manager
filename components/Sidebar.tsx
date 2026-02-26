@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
+import { LayoutDashboard, Activity, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { UserRole } from '../types';
 
@@ -46,6 +46,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       label: 'Usuários & Acessos',
       icon: <Shield size={20} />,
       roles: ['ADMIN'] as UserRole[]
+    },
+    {
+      id: 'audit-log',
+      label: 'Log de Auditoria',
+      icon: <Activity size={20} />,
+      path: '/admin/audit-log',
+      roles: ['ADMIN'] // Apenas o admin verá o botão
     },
   ], []);
 
@@ -105,8 +112,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                   setIsOpen(false);
                 }}
                 className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${isActive
-                    ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1'
-                    : 'text-blue-100 hover:bg-white/10 hover:text-white'
+                  ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1'
+                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
                   }`}
               >
                 <span className={`mr-3 transition-colors ${isActive ? 'text-[#1e3a8a]' : 'text-blue-300 group-hover:text-white'}`}>

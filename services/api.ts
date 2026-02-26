@@ -61,6 +61,13 @@ export const churchApi = {
   delete: async (id: string) => {
     await api.delete(`/api/igrejas/${id}`);
   },
+
+  getPublicById: async (id: string) => {
+    // Importante: certifique-se de que essa rota no seu Spring Boot 
+    // está liberada no SecurityConfigurations (ex: /api/public/igrejas/{id})
+    const response = await api.get<Church>(`/api/public/igrejas/${id}`);
+    return response.data;
+  },
 };
 
 export const memberApi = {
@@ -370,5 +377,12 @@ export const reportApi = {
 
   // Futuramente:
   // exportFinancials: async (churchId: string, filters: any) => { ... }
+};
+
+export const auditApi = {
+  getLogs: async (churchId: string, page: number = 0) => {
+    const response = await api.get<any>(`/api/audit/${churchId}?page=${page}&size=20`);
+    return response.data; // Retorna o objeto Page do Spring (content, totalPages, etc)
+  }
 };
 
