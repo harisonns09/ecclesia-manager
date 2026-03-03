@@ -95,6 +95,15 @@ const EventRegistrationPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  const formatCPF = (value: string) => {
+  return value
+    .replace(/\D/g, '') // Remove tudo o que não é dígito
+    .slice(0, 11) // Limita a 11 números
+    .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o terceiro e o quarto dígitos
+    .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o sexto e o sétimo dígitos
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2'); // Coloca um hífen entre o nono e o décimo dígitos
+};
+
   const handleConfirmAction = async () => {
     if (!event || !id || !registrationId || !modalType) return;
     setIsConfirmingPayment(true);
@@ -411,8 +420,9 @@ const EventRegistrationPage: React.FC = () => {
                   required
                   className="input-field !pl-12"
                   placeholder="000.000.000-00"
+                  maxLength={14}
                   value={formData.cpf}
-                  onChange={e => setFormData({ ...formData, cpf: e.target.value })}
+                  onChange={e => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
                 />
                 <FileText size={18} className="absolute left-4 top-4 text-gray-400" />
               </div>
