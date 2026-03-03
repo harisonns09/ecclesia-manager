@@ -153,10 +153,14 @@ export interface Visitor {
   churchId: string;
   nome: string;
   telefone: string;
-  dataVisita: string; // Data da primeira visita
+  dataVisita: string;
   dataAniversario?: string;
   status: VisitorStatus;
-  observacao?: string; // Como conheceu a igreja, pedidos de oração, etc.
+  observacao?: string;
+  progressoTrilha?: number;
+  trilhaCafeConcluido?: boolean;
+  trilhaCelulaConcluida?: boolean;
+  trilhaClasseConcluida?: boolean;
 }
 
 export interface CheckInKidsRequest {
