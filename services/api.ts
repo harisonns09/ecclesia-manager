@@ -142,7 +142,7 @@ export const eventApi = {
     return response.data;
   },
   getById: async (churchId: string, eventId: string) => {
-    const response = await api.get<Event>(`/api/igrejas/${churchId}/eventos/${eventId}`);
+    const response = await api.get<Event>(`/api/eventos/${eventId}`);
     return response.data;
   },
   create: async (churchId: string, event: Partial<Event>) => {
@@ -193,7 +193,7 @@ export const ministryApi = {
     return response.data;
   },
   getById: async (churchId: string, ministryId: string) => {
-    const response = await api.get<Ministry>(`/api/igrejas/${churchId}/ministerios/${ministryId}`);
+    const response = await api.get<Ministry>(`/api/igrejas/${churchId}/ministerio/${ministryId}`);
     return response.data;
   },
   create: async (churchId: string, ministry: Omit<Ministry, 'id'>) => {
@@ -205,7 +205,7 @@ export const ministryApi = {
     return response.data;
   },
   delete: async (churchId: string, ministryId: string) => {
-    await api.delete(`/api/igrejas/${churchId}/ministerios/${ministryId}`);
+    await api.delete(`/api/igrejas/${churchId}/ministerio/${ministryId}`);
   },
 };
 
@@ -317,12 +317,7 @@ export const visitorApi = {
 
   delete: async (churchId: string, visitorId: string) => {
     await api.delete(`/api/igrejas/${churchId}/visitantes/${visitorId}`);
-  },
-
-  updateTrilha: async (churchId: string, id: string, data: any) => {
-    const response = await api.put(`/api/igrejas/${churchId}/membros/${id}/trilha`, data);
-    return response.data;
-  },
+  }
 };
 
 export const kidsApi = {
@@ -344,27 +339,27 @@ export const kidsApi = {
 export const userApi = {
   create: async (churchId: string, userData: any) => {
     const payload = { ...userData, igrejaId: churchId };
-    const response = await api.post(`/api/igrejas/${churchId}/usuarios`, payload);
+    const response = await api.post('/api/usuarios/register', payload);
     return response.data;
   },
   getByChurch: async (churchId: string) => {
-    const response = await api.get(`/api/igrejas/${churchId}/usuarios`);
+    const response = await api.get(`/api/usuarios/${churchId}`);
     return response.data;
   },
 
   delete: async (churchId: string, userId: string) => {
-    const response = await api.delete(`/api/igrejas/${churchId}/usuarios/${userId}`);
+    const response = await api.delete(`/api/usuarios/${userId}`);
     return response.data;
   },
 
   update: async (churchId: string, userId: string, userData: any) => {
     const payload = { ...userData, igrejaId: churchId };
-    const response = await api.put(`/api/igrejas/${churchId}/usuarios/${userId}`, payload);
+    const response = await api.put(`/api/usuarios/${userId}`, payload);
     return response.data;
   },
 
-  getRoles: async (churchId: string) => {
-    const response = await api.get<string[]>(`/api/igrejas/${churchId}/usuarios/roles`); 
+  getRoles: async () => {
+    const response = await api.get<string[]>('/api/usuarios/roles'); 
     return response.data;
   },
 };
@@ -388,13 +383,6 @@ export const auditApi = {
   getLogs: async (churchId: string, page: number = 0) => {
     const response = await api.get<any>(`/api/audit/${churchId}?page=${page}&size=20`);
     return response.data; // Retorna o objeto Page do Spring (content, totalPages, etc)
-  }
-};
-
-export const dashboardApi = {
-  getResumo: async (churchId: string) => {
-    const response = await api.get(`/api/igrejas/${churchId}/dashboard`);
-    return response.data;
   }
 };
 
