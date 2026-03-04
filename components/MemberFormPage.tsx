@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { User, Mail, Phone, Calendar, Save, ArrowLeft, MapPin, Loader, Church as ChurchIcon, FileText, AlertCircle } from 'lucide-react';
+// 🔥 IMPORTAÇÃO ADICIONADA AQUI
+import { useQueryClient } from '@tanstack/react-query'; 
 
 import { Member, MemberStatus } from '../types';
 import { memberApi } from '../services/api';
@@ -17,6 +19,9 @@ const MemberFormPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const isEditing = !!id;
     const { currentChurch: church } = useApp();
+    
+    // 🔥 INICIALIZANDO O QUERY CLIENT
+    const queryClient = useQueryClient();
 
     const [isLoading, setIsLoading] = useState(false);
     const [loadingCep, setLoadingCep] = useState(false);
@@ -117,6 +122,11 @@ const MemberFormPage: React.FC = () => {
                 await memberApi.create(church.id, tempData as Member);
                 toast.success("Membro cadastrado!", { id: toastId });
             }
+            
+            // 🔥 INVALIDANDO O CACHE AQUI:
+            // Isso avisa a lista de membros que ela precisa buscar os dados novos no banco
+            queryClient.invalidateQueries({ queryKey: ['members'] });
+
             navigate('/admin/members');
         } catch (error) {
             toast.error("Erro ao salvar dados.", { id: toastId });

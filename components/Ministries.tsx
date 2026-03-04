@@ -4,6 +4,7 @@ import { Ministry, Member } from '../types';
 import { ministryApi, memberApi } from '../services/api';
 import { useApp } from '../contexts/AppContext'; // Contexto
 import { toast } from 'sonner'; // Toast
+import ConfirmationModal from './ConfirmationModal';
 
 // Sem props!
 const Ministries: React.FC = () => {
@@ -22,6 +23,11 @@ const Ministries: React.FC = () => {
     igrejaId: church?.id,
     liderResponsavel: '',
   });
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalAction, setModalAction] = useState<'create' | 'update' | 'delete' | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (church) {
@@ -50,42 +56,49 @@ const Ministries: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!church) return;
+    setModalAction(editingId ? 'update' : 'create');
+    setIsModalOpen(true);
+  };
 
-    const toastId = toast.loading(editingId ? "Atualizando..." : "Criando...");
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+    setModalAction('delete');
+    setIsModalOpen(true);
+  };
+
+  const handleConfirmAction = async () => {
+    if (!church || !modalAction) return;
+    
+    setIsProcessing(true);
+    const toastId = toast.loading("Processando...");
 
     try {
-      if (editingId) {
+      if (modalAction === 'delete' && deleteId) {
+        await ministryApi.delete(church.id, deleteId);
+        setMinistries(prev => prev.filter(m => m.id !== deleteId));
+        toast.success("Ministério excluído.", { id: toastId });
+      } else if (modalAction === 'update' && editingId) {
         const updated = await ministryApi.update(church.id, editingId, formData);
         setMinistries(prev => prev.map(m => m.id === editingId ? updated : m));
         toast.success("Ministério atualizado!", { id: toastId });
-      } else {
+        resetForm();
+      } else if (modalAction === 'create') {
         const created = await ministryApi.create(church.id, formData as Ministry);
         setMinistries(prev => [...prev, created]);
         toast.success("Ministério criado!", { id: toastId });
+        resetForm();
       }
-      resetForm();
     } catch (error) {
-      console.error("Erro ao salvar:", error);
-      toast.error("Erro ao salvar ministério.", { id: toastId });
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!church) return;
-    
-    // Confirmação nativa por enquanto, ou use ConfirmationModal
-    if (!window.confirm("Tem certeza que deseja excluir este ministério?")) return;
-    
-    const toastId = toast.loading("Excluindo...");
-    try {
-      await ministryApi.delete(church.id, id);
-      setMinistries(prev => prev.filter(m => m.id !== id));
-      toast.success("Ministério excluído.", { id: toastId });
-    } catch (error) {
-      toast.error("Erro ao excluir ministério.", { id: toastId });
+      console.error("Erro:", error);
+      toast.error("Erro ao processar solicitação.", { id: toastId });
+    } finally {
+      setIsProcessing(false);
+      setIsModalOpen(false);
+      setModalAction(null);
+      setDeleteId(null);
     }
   };
 
@@ -122,6 +135,20 @@ const startEdit = async (id: string) => {
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
       
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmAction}
+        title={modalAction === 'delete' ? 'Excluir Ministério' : (modalAction === 'update' ? 'Atualizar Ministério' : 'Novo Ministério')}
+        description={
+          modalAction === 'delete' ? 'Tem certeza que deseja excluir este ministério? Esta ação não pode ser desfeita.' :
+          (modalAction === 'update' ? `Deseja salvar as alterações no ministério "${formData.nome}"?` : `Deseja criar o ministério "${formData.nome}"?`)
+        }
+        confirmText={modalAction === 'delete' ? 'Sim, Excluir' : 'Sim, Salvar'}
+        isProcessing={isProcessing}
+        colorClass={modalAction === 'delete' ? 'red' : 'blue'}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-6">
         <div>

@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, Save, ArrowLeft, Users, Loader, AlertCircle, D
 import { eventApi } from '../services/api';
 import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EventoBackend {
   nomeEvento: string;
@@ -23,6 +24,8 @@ const EventFormPage: React.FC = () => {
   const { currentChurch: church } = useApp();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState('');
 
   const initialFormState: EventoBackend = {
@@ -74,7 +77,7 @@ const EventFormPage: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!church) return;
     
@@ -84,8 +87,13 @@ const EventFormPage: React.FC = () => {
        setError("O campo Ministério Responsável é obrigatório.");
        return;
     }
+    setIsModalOpen(true);
+  };
 
-    setIsLoading(true);
+  const handleConfirmSave = async () => {
+    if (!church) return;
+
+    setIsProcessing(true);
     const toastId = toast.loading(isEditing ? "Atualizando evento..." : "Criando evento...");
 
     try {
@@ -105,8 +113,9 @@ const EventFormPage: React.FC = () => {
       const msg = err.response?.data?.message || "Erro ao salvar evento.";
       setError(msg);
       toast.error(msg, { id: toastId });
+      setIsModalOpen(false);
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
@@ -114,6 +123,19 @@ const EventFormPage: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      <ConfirmationModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={handleConfirmSave}
+        title={isEditing ? "Salvar Alterações" : "Criar Evento"}
+        description={
+            <>Deseja confirmar a {isEditing ? 'atualização' : 'criação'} do evento <strong>{formData.nomeEvento}</strong>?</>
+        }
+        confirmText={isEditing ? "Sim, Atualizar" : "Sim, Criar"}
+        isProcessing={isProcessing}
+        colorClass="blue"
+      />
       
       {/* Header */}
       <div className="flex items-center mb-8">
@@ -263,7 +285,7 @@ const EventFormPage: React.FC = () => {
               disabled={isLoading}
               className="btn-primary shadow-lg"
             >
-              {isLoading ? <Loader className="animate-spin" size={20} /> : <Save size={20} />}
+              <Save size={20} />
               <span>{isEditing ? 'Salvar Alterações' : 'Criar Evento'}</span>
             </button>
           </div>

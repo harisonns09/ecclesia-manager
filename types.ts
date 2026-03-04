@@ -7,7 +7,6 @@ export interface Church {
   state: string;      
   cnpj: string; 
   slug: string;   
-  // themeColor: string; // Remova se o Java não mandar
 }
 
 
@@ -16,7 +15,7 @@ export interface Church {
 export enum MemberStatus {
   ACTIVE = 'Ativo',
   INACTIVE = 'Inativo',
-  VISITOR = 'Visitante', // Caso queira converter visitante em membro depois
+  VISITOR = 'Visitante',
 }
 
 export interface Member {
@@ -26,12 +25,10 @@ export interface Member {
   email: string;
   telefone: string;
   
-  // --- Novos Campos ---
   dataNascimento?: string;
   genero: string
   estadoCivil: string;
   
-  // Endereço
   cep?: string;
   endereco?: string;
   numero?: string;
@@ -40,11 +37,10 @@ export interface Member {
   estado?: string;
   complemento?: string;
 
-  // Eclesiástico
   ministerio?: string;
   dataBatismo?: string;
   status: MemberStatus;
-  observacao?: string; // Campo extra para anotações diversas
+  observacao?: string;
 }
 export enum TransactionType {
   INCOME = 'Entrada',
@@ -63,7 +59,7 @@ export enum TransactionCategory {
 
 export interface Transaction {
   id: string;
-  churchId: string; // Multi-tenancy link
+  churchId: string;
   description: string;
   amount: number;
   type: TransactionType;
@@ -80,7 +76,7 @@ export interface EventRegistration {
 
 export interface Event {
   id: string;
-  churchId: string; // Multi-tenancy link
+  churchId: string;
   nomeEvento: string;
   dataEvento: string;
   horario: string;
@@ -98,7 +94,6 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-// New Types for Ministries
 export interface Ministry {
   id: string;
   nome: string;
@@ -112,11 +107,10 @@ export interface Scale {
   churchId: string;
   ministryId: string;
   date: string;
-  title: string; // e.g., "Culto de Domingo"
-  volunteers: string[]; // List of Member IDs
+  title: string;
+  volunteers: string[];
 }
 
-// New Types for Small Groups (Cells)
 export interface SmallGroup {
   id: string;
   churchId: string;
@@ -124,16 +118,15 @@ export interface SmallGroup {
   leaderName: string;
   hostName: string;
   address: string;
-  dayOfWeek: string; // 'Segunda', 'Terça', etc.
+  dayOfWeek: string;
   time: string;
   neighborhood: string;
 }
 
-// New Types for Prayer Requests
 export interface PrayerRequest {
   id: string;
   churchId: string;
-  authorName: string; // Can be "Anonymous"
+  authorName: string;
   request: string;
   date: string;
   category: 'Saúde' | 'Família' | 'Financeiro' | 'Espiritual' | 'Outros';
@@ -178,7 +171,7 @@ export interface CheckInKids {
   nomeCrianca: string;
   nomeResponsavel: string;
   telefoneResponsavel: string;
-  codigoSeguranca: string; // "K-1234"
+  codigoSeguranca: string;
   dataEntrada: string;
   alergias?: string;
   status: 'ATIVO' | 'FINALIZADO';
@@ -190,8 +183,8 @@ export interface User {
   id: string;
   user: string;
   password: string;
-  role: UserRole; // <-- Campo crucial!
-  igrejaId: string; // Para multi-tenancy 
+  role: UserRole;
+  igrejaId: string;
 }
 
 export interface AuditLogEntry {
@@ -214,6 +207,3 @@ export interface SpringPage<T> {
   last: boolean;
   empty: boolean;
 }
-
-
-
