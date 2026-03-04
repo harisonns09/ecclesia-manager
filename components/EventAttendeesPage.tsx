@@ -32,7 +32,7 @@ const EventAttendeesPage: React.FC = () => {
         if (!church) return;
         setIsLoading(true);
         try {
-            const data = await eventApi.getById("public", eventId); 
+            const data = await eventApi.getById(eventId); 
             if (data) {
                 setEvent(data);
                 setAttendees(data.inscricoes || []);
