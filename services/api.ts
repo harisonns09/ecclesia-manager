@@ -352,7 +352,6 @@ export const userApi = {
   },
   getByChurch: async (churchId: string) => {
     const response = await api.get(`/api/usuarios/${churchId}`);
-    const response = await api.get(`/api/usuarios/${churchId}`);
     return response.data;
   },
 
