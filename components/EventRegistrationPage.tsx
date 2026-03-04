@@ -429,9 +429,8 @@ const EventRegistrationPage: React.FC = () => {
                   required
                   className="input-field !pl-12"
                   placeholder="000.000.000-00"
-                  maxLength={14}
                   value={formData.cpf}
-                  onChange={e => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                  onChange={e => setFormData({ ...formData, cpf: e.target.value })}
                 />
                 <FileText size={18} className="absolute left-4 top-4 text-gray-400" />
               </div>

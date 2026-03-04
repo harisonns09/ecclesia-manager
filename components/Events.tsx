@@ -238,17 +238,6 @@ const Events: React.FC<EventsProps> = ({
               <div className="p-6 bg-gray-50/50 border-t md:border-t-0 md:border-l border-gray-100 flex items-center justify-end md:justify-center">
                 {isAdmin ? (
                   <div className="flex items-center gap-2">
-                    {/* NOVO BOTÃO: Só aparece se o evento for pago */}
-                    {event.preco > 0 && (
-                        <button 
-                            onClick={() => navigate(`/admin/events/${event.id}/finance`)}
-                            className="p-2.5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg hover:bg-emerald-100 hover:shadow-sm transition-all"
-                            title="Resumo Financeiro"
-                        >
-                          <DollarSign size={20} />
-                        </button>
-                    )}
-                    
                     <button 
                         onClick={() => navigate(`/admin/events/${event.id}/attendees`)}
                         className="p-2.5 text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 hover:shadow-sm transition-all"

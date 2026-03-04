@@ -352,6 +352,7 @@ export const userApi = {
   },
   getByChurch: async (churchId: string) => {
     const response = await api.get(`/api/usuarios/${churchId}`);
+    const response = await api.get(`/api/usuarios/${churchId}`);
     return response.data;
   },
 
@@ -391,13 +392,6 @@ export const auditApi = {
   getLogs: async (churchId: string, page: number = 0) => {
     const response = await api.get<any>(`/api/audit/${churchId}?page=${page}&size=20`);
     return response.data; // Retorna o objeto Page do Spring (content, totalPages, etc)
-  }
-};
-
-export const dashboardApi = {
-  getResumo: async (churchId: string) => {
-    const response = await api.get(`/api/igrejas/${churchId}/dashboard`);
-    return response.data;
   }
 };
 

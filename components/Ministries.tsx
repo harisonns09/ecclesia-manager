@@ -102,26 +102,11 @@ const Ministries: React.FC = () => {
     }
   };
 
-const startEdit = async (id: string) => {
-    if (!church) return;
-
-    const toastId = toast.loading("Carregando dados...");
-    
-    try {
-      // Supondo que você tenha o método getById na sua ministryApi. 
-      // Se for outro nome (ex: getOne), basta ajustar aqui.
-      const freshMinistryData = await ministryApi.getById(church.id, id);
-      
-      setEditingId(freshMinistryData.id);
-      setFormData(freshMinistryData);
-      setShowForm(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      
-      toast.dismiss(toastId); // Fecha o aviso de "Carregando"
-    } catch (error) {
-      console.error("Erro ao buscar ministério:", error);
-      toast.error("Erro ao carregar dados do ministério.", { id: toastId });
-    }
+  const startEdit = (ministry: Ministry) => {
+    setEditingId(ministry.id);
+    setFormData(ministry);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const resetForm = () => {
@@ -249,7 +234,7 @@ const startEdit = async (id: string) => {
 
               <div className="flex justify-end gap-2 pt-4 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity mt-auto">
                 <button 
-                  onClick={() => startEdit(ministry.id)} 
+                  onClick={() => startEdit(ministry)} 
                   className="p-2 text-gray-400 hover:text-[#1e3a8a] hover:bg-blue-50 rounded-lg transition-colors"
                   title="Editar"
                 >
