@@ -5,6 +5,7 @@ import { Event } from '../types';
 import { eventApi } from '../services/api';
 import { useApp } from '../contexts/AppContext'; 
 import { toast } from 'sonner';
+import ConfirmationModal from './ConfirmationModal';
 
 interface EventsProps {
   events?: Event[]; 
@@ -26,6 +27,10 @@ const Events: React.FC<EventsProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchId, setSearchId] = useState('');
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const isUsingProps = propEvents !== undefined;
   const displayEvents = isUsingProps ? propEvents : internalEvents;
@@ -58,24 +63,34 @@ const Events: React.FC<EventsProps> = ({
     }
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (!church) return;
-    if (window.confirm('Tem certeza que deseja excluir permanentemente este evento?')) {
-        const toastId = toast.loading("Excluindo evento...");
-      try {
-        await eventApi.delete(church.id, id);
+  const handleDeleteClick = (id: string) => {
+    setEventToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!church || !eventToDelete) return;
+    
+    setIsProcessing(true);
+    const toastId = toast.loading("Excluindo evento...");
+
+    try {
+        await eventApi.delete(church.id, eventToDelete);
         
         // Atualiza localmente
-        const newEvents = displayEvents.filter(e => String(e.id) !== id);
+        const newEvents = displayEvents.filter(e => String(e.id) !== eventToDelete);
         setInternalEvents(newEvents);
         
         // Atualiza pai se necessário
         if (propSetEvents) propSetEvents(newEvents);
 
         toast.success("Evento excluído.", { id: toastId });
-      } catch (err) {
+    } catch (err) {
         toast.error("Erro ao excluir evento.", { id: toastId });
-      }
+    } finally {
+        setIsProcessing(false);
+        setIsDeleteModalOpen(false);
+        setEventToDelete(null);
     }
   };
 
@@ -93,6 +108,17 @@ const Events: React.FC<EventsProps> = ({
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative">
       
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Evento"
+        description="Tem certeza que deseja excluir permanentemente este evento? Esta ação não pode ser desfeita."
+        confirmText="Sim, Excluir"
+        isProcessing={isProcessing}
+        colorClass="red"
+      />
+
       {isSearchModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a]/60 p-4 backdrop-blur-sm animate-in fade-in">
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 border border-gray-200">
@@ -227,7 +253,7 @@ const Events: React.FC<EventsProps> = ({
                       <Edit2 size={20} />
                     </button>
                     <button 
-                        onClick={() => handleDeleteEvent(String(event.id))} 
+                        onClick={() => handleDeleteClick(String(event.id))} 
                         className="p-2.5 text-red-600 bg-white border border-gray-300 rounded-lg hover:bg-red-50 hover:border-red-200 transition-all"
                         title="Excluir"
                     >

@@ -47,7 +47,7 @@ const EventRegistrationPage: React.FC = () => {
   const loadEvent = async (eventId: string) => {
     try {
       setIsLoading(true);
-      const data = await eventApi.getById("public", eventId);
+      const data = await eventApi.getById(eventId);
       setEvent(data);
     } catch (err) {
       console.error(err);
@@ -95,6 +95,23 @@ const EventRegistrationPage: React.FC = () => {
     setModalOpen(true);
   };
 
+  const formatCPF = (value: string) => {
+  return value
+    .replace(/\D/g, '') // Remove tudo o que não é dígito
+    .slice(0, 11) // Limita a 11 números
+    .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o terceiro e o quarto dígitos
+    .replace(/(\d{3})(\d)/, '$1.$2') // Coloca um ponto entre o sexto e o sétimo dígitos
+    .replace(/(\d{3})(\d{1,2})$/, '$1-$2'); // Coloca um hífen entre o nono e o décimo dígitos
+};
+
+  const formatPhone = (value: string) => {
+    let v = value.replace(/\D/g, '').substring(0, 11);
+    if (v.length > 10) return v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (v.length > 6) return v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    if (v.length > 2) return v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+    return v;
+  };
+
   const handleConfirmAction = async () => {
     if (!event || !id || !registrationId || !modalType) return;
     setIsConfirmingPayment(true);
@@ -109,7 +126,7 @@ const EventRegistrationPage: React.FC = () => {
           numeroInscricao: registrationId
         });
 
-        await eventApi.updatePaymentMethod("public", id, registrationId, 'ONLINE');
+       // await eventApi.updatePaymentMethod("public", id, registrationId, 'ONLINE');
 
         if (response.checkoutUrl) {
           window.location.href = response.checkoutUrl;
@@ -395,8 +412,9 @@ const EventRegistrationPage: React.FC = () => {
                     type="tel" required
                     className="input-field !pl-12"
                     value={formData.telefone}
-                    onChange={e => setFormData({ ...formData, telefone: e.target.value })}
+                    onChange={e => setFormData({ ...formData, telefone: formatPhone(e.target.value) })}
                     placeholder="(00) 00000-0000"
+                    maxLength={15}
                   />
                   <Phone size={18} className="absolute left-4 top-4 text-gray-400" />
                 </div>
