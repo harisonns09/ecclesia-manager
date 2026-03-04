@@ -7,6 +7,7 @@ import { Shield, UserPlus, Mail, Lock, Loader, CheckCircle, Edit2, Trash2, Plus,
 import { toast } from 'sonner';
 import { useApp } from '../contexts/AppContext';
 import { userApi } from '../services/api';
+import ConfirmationModal from './ConfirmationModal';
 
 const userSchema = z.object({
   user: z.string().min(3, "O login deve ter pelo menos 3 caracteres"),
@@ -28,10 +29,13 @@ const SystemUsersPage: React.FC = () => {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<SystemUser | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
 
   const { data: roles = [], isLoading: isLoadingRoles } = useQuery({
-    queryKey: ['userRoles'],
-    queryFn: userApi.getRoles,
+    queryKey: ['userRoles', currentChurch?.id],
+    queryFn: () => userApi.getRoles(currentChurch!.id), // Envolvemos em uma função anônima
+    enabled: !!currentChurch, // Só busca se houver uma igreja
     staleTime: Infinity,
   });
 
@@ -46,7 +50,6 @@ const SystemUsersPage: React.FC = () => {
     defaultValues: { user: '', password: '', role: '' }
   });
 
-  // Preenche o formulário quando clica em Editar
   // Preenche o formulário quando clica em Editar
   useEffect(() => {
     if (editingUser) {
@@ -78,6 +81,8 @@ const SystemUsersPage: React.FC = () => {
     onSuccess: () => {
       toast.success("Acesso revogado com sucesso.");
       queryClient.invalidateQueries({ queryKey: ['users', currentChurch?.id] });
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
     },
     onError: () => toast.error("Erro ao excluir usuário.")
   });
@@ -109,10 +114,9 @@ const SystemUsersPage: React.FC = () => {
     reset();
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm("Tem certeza que deseja remover o acesso deste usuário? Ele não poderá mais logar no sistema.")) {
-      deleteUserMutation.mutate(id);
-    }
+  const handleDeleteClick = (user: SystemUser) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
   };
 
   const formatRoleName = (roleStr: string) => {
@@ -121,7 +125,16 @@ const SystemUsersPage: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto animate-in fade-in duration-500 pb-12">
-      
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}
+        title="Revogar Acesso"
+        description={<>Tem certeza que deseja remover o acesso de <strong>{userToDelete?.user}</strong>? Ele não poderá mais logar no sistema.</>}
+        confirmText="Sim, Revogar"
+        isProcessing={deleteUserMutation.isPending}
+        colorClass="red"
+      />
 
       <div className="mb-8 border-b border-gray-200 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -195,7 +208,7 @@ const SystemUsersPage: React.FC = () => {
                             <Edit2 size={18} />
                           </button>
                           <button 
-                            onClick={() => handleDelete(user.id)}
+                            onClick={() => handleDeleteClick(user)}
                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                             title="Excluir"
                           >

@@ -69,6 +69,13 @@ const MemberRegistrationPublic: React.FC = () => {
     setFormData({ ...formData, telefone: formatPhoneNumber(e.target.value) });
   };
 
+  const formatCEP = (value: string) => {
+    return value
+      .replace(/\D/g, '')
+      .slice(0, 8)
+      .replace(/^(\d{5})(\d)/, '$1-$2');
+  };
+
   const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
     const cep = e.target.value.replace(/\D/g, '');
     if (cep.length === 8) {
@@ -258,7 +265,7 @@ const MemberRegistrationPublic: React.FC = () => {
 
                 <div className="relative md:col-span-2">
                   <label className="label-field block text-sm font-bold text-gray-700 mb-1 ml-1">CEP {loadingCep && <Loader size={12} className="inline animate-spin text-blue-600" />}</label>
-                  <input className="input-field w-full p-3 bg-gray-50 rounded-lg border-none focus:ring-2 focus:ring-blue-100" value={formData.cep} onChange={e => setFormData({ ...formData, cep: e.target.value })} onBlur={handleCepBlur} placeholder="00000-000" />
+                  <input className="input-field w-full p-3 bg-gray-50 rounded-lg border-none focus:ring-2 focus:ring-blue-100" value={formData.cep} onChange={e => setFormData({ ...formData, cep: formatCEP(e.target.value) })} onBlur={handleCepBlur} placeholder="00000-000" maxLength={9} />
                 </div>
 
                 <div className="md:col-span-2">
