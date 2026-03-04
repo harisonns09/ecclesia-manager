@@ -68,6 +68,13 @@ const MemberFormPage: React.FC = () => {
         }
     };
 
+    const formatCEP = (value: string) => {
+        return value
+          .replace(/\D/g, '')
+          .slice(0, 8)
+          .replace(/^(\d{5})(\d)/, '$1-$2');
+    };
+
     const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
         const cep = e.target.value.replace(/\D/g, '');
         if (cep.length === 8) {
@@ -230,7 +237,7 @@ const MemberFormPage: React.FC = () => {
 
                             <div className="relative">
                                 <label className="label-field">CEP {loadingCep && <Loader size={12} className="inline animate-spin text-blue-600" />}</label>
-                                <input {...register('cep')} onBlur={handleCepBlur} className="input-field" placeholder="00000-000" />
+                                <input {...register('cep', { onChange: (e) => e.target.value = formatCEP(e.target.value) })} onBlur={handleCepBlur} className="input-field" placeholder="00000-000" maxLength={9} />
                                 {errors.cep && <p className="text-red-500 text-xs mt-1">{errors.cep.message}</p>}
                             </div>
                             <div className="md:col-span-2">

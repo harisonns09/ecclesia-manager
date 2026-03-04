@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
 
 export const api = axios.create({
-  // baseURL: 'http://localhost:8080', 
+  //baseURL: 'http://localhost:8080', 
   baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
 });
 
@@ -319,7 +319,7 @@ export const visitorApi = {
   },
 
   delete: async (churchId: string, visitorId: string) => {
-    await api.delete(`/api/igrejas/${churchId}/visitantes/${visitorId}`);
+    await api.delete(`/api/pessoas/igrejas/${churchId}/${visitorId}`);
   },
 
   updateTrilha: async (churchId: string, id: string, data: any) => {
@@ -391,6 +391,13 @@ export const auditApi = {
   getLogs: async (churchId: string, page: number = 0) => {
     const response = await api.get<any>(`/api/audit/${churchId}?page=${page}&size=20`);
     return response.data; // Retorna o objeto Page do Spring (content, totalPages, etc)
+  }
+};
+
+export const dashboardApi = {
+  getResumo: async (churchId: string) => {
+    const response = await api.get(`/api/igrejas/${churchId}/dashboard`);
+    return response.data;
   }
 };
 

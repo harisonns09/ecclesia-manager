@@ -1,6 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Activity, Shield, Users, Wallet, Calendar, LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby } from 'lucide-react';
+import { 
+  LayoutDashboard, Activity, Shield, Users, Wallet, Calendar, 
+  LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby, 
+  ChevronDown, ChevronRight, Settings, UsersRound
+} from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { UserRole } from '../types';
 
@@ -9,62 +13,110 @@ interface SidebarProps {
   setIsOpen: (open: boolean) => void;
 }
 
+// Tipo atualizado para suportar submenus
+type MenuItem = {
+  id: string;
+  label: string;
+  icon: JSX.Element;
+  roles?: UserRole[];
+  subItems?: MenuItem[]; // Se tiver subItems, atua como um grupo
+};
+
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-
   const { currentUser, logout, exitChurch } = useApp();
 
-  const menuItems = useMemo(() => [
-    { id: '/admin/dashboard', label: 'Painel Geral', icon: <LayoutDashboard size={20} /> },
-    { id: '/admin/members', label: 'Membros', icon: <Users size={20} /> },
-    { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={20} /> },
-    { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={20} /> },
-    { id: '/admin/events', label: 'Eventos', icon: <Calendar size={20} /> },
-    { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={20} /> },
+  // Estado para controlar quais grupos (accordions) estão abertos
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-    {
-      id: '/admin/financials',
-      label: 'Financeiro',
-      icon: <Wallet size={20} />,
-      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[]
+  // Estrutura de Menus Agrupados
+  const menuItems: MenuItem[] = useMemo(() => [
+    { 
+      id: '/admin/dashboard', 
+      label: 'Painel Geral', 
+      icon: <LayoutDashboard size={20} /> 
     },
     {
-      id: '/admin/kids/checkin',
-      label: 'Check-in Kids',
+      id: 'pessoas',
+      label: 'Pessoas',
+      icon: <UsersRound size={20} />,
+      subItems: [
+        { id: '/admin/members', label: 'Membros', icon: <Users size={18} /> },
+        { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={18} /> },
+      ]
+    },
+    {
+      id: 'gestao',
+      label: 'Organização',
+      icon: <Home size={20} />,
+      subItems: [
+        { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={18} /> },
+        { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={18} /> },
+        { id: '/admin/events', label: 'Eventos', icon: <Calendar size={18} /> },
+      ]
+    },
+    {
+      id: 'kids',
+      label: 'Ministério Infantil',
       icon: <Baby size={20} />,
-      roles: ['ADMIN', 'KIDS'] as UserRole[]
+      roles: ['ADMIN', 'KIDS'] as UserRole[],
+      subItems: [
+        { id: '/admin/kids/dashboard', label: 'Painel Kids', icon: <LayoutDashboard size={18} />, roles: ['ADMIN', 'KIDS'] as UserRole[] },
+        { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={18} />, roles: ['ADMIN', 'KIDS'] as UserRole[] },
+      ]
     },
     {
-      id: '/admin/kids/dashboard',
-      label: 'Dashboard Kids',
-      icon: <Baby size={20} />,
-      roles: ['ADMIN', 'KIDS'] as UserRole[]
-    },
-    {
-      id: '/admin/users',
-      label: 'Usuários & Acessos',
-      icon: <Shield size={20} />,
-      roles: ['ADMIN'] as UserRole[]
-    },
-    {
-      id: 'audit-log',
-      label: 'Log de Auditoria',
-      icon: <Activity size={20} />,
-      path: '/admin/audit-log',
-      roles: ['ADMIN'] // Apenas o admin verá o botão
-    },
+      id: 'admin',
+      label: 'Administrativo',
+      icon: <Settings size={20} />,
+      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[], // Se o cara não for nenhum desses, oculta o grupo todo
+      subItems: [
+        { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={18} />, roles: ['ADMIN', 'TESOUREIRO'] as UserRole[] },
+        { id: '/admin/users', label: 'Usuários & Acessos', icon: <Shield size={18} />, roles: ['ADMIN'] as UserRole[] },
+        { id: '/admin/audit-log', label: 'Log de Auditoria', icon: <Activity size={18} />, roles: ['ADMIN'] as UserRole[] },
+      ]
+    }
   ], []);
 
+  // Filtra itens e subitens baseados na Role do Usuário
   const visibleMenuItems = useMemo(() => {
     if (!currentUser) return [];
 
-    return menuItems.filter(item => {
-      if (!item.roles) return true;
+    return menuItems.map(item => {
+      // 1. Verifica se o usuário tem acesso ao grupo principal
+      if (item.roles && !item.roles.includes(currentUser.role as UserRole)) return null;
 
-      return item.roles.includes(currentUser.role as UserRole);
-    });
+      // 2. Se for um grupo, filtra os subitens
+      if (item.subItems) {
+        const filteredSubs = item.subItems.filter(sub => 
+          !sub.roles || sub.roles.includes(currentUser.role as UserRole)
+        );
+        
+        // Se após filtrar, o grupo ficar vazio, oculta o grupo inteiro
+        if (filteredSubs.length === 0) return null;
+        
+        return { ...item, subItems: filteredSubs };
+      }
+
+      return item;
+    }).filter(Boolean) as MenuItem[];
   }, [menuItems, currentUser]);
+
+  // Efeito para expandir automaticamente o grupo da página atual ao carregar
+  useEffect(() => {
+    const currentGroup = visibleMenuItems.find(item => 
+      item.subItems?.some(sub => location.pathname === sub.id)
+    );
+
+    if (currentGroup) {
+      setExpandedGroups(prev => ({ ...prev, [currentGroup.id]: true }));
+    }
+  }, [location.pathname, visibleMenuItems]);
+
+  const toggleGroup = (id: string) => {
+    setExpandedGroups(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <>
@@ -75,7 +127,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         />
       )}
 
-      {/* Sidebar Container */}
       {/* Sidebar Container */}
       <div className={`fixed inset-y-0 left-0 z-[70] w-72 bg-[#1e3a8a] text-white shadow-2xl transform transition-transform duration-300 ease-in-out flex flex-col md:relative md:translate-x-0 md:z-0 md:shadow-none ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
@@ -103,24 +154,76 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto custom-scrollbar">
           {visibleMenuItems.map((item) => {
-            const isActive = location.pathname === item.id;
+            const isGroup = !!item.subItems;
+            const isExpanded = expandedGroups[item.id];
+            
+            // Verifica se um item simples está ativo
+            const isActive = !isGroup && location.pathname === item.id;
+            
+            // Verifica se algum subitem deste grupo está ativo
+            const isGroupActive = isGroup && item.subItems?.some(sub => location.pathname === sub.id);
+
             return (
-              <button
-                key={item.id}
-                onClick={() => {
-                  navigate(item.id);
-                  setIsOpen(false);
-                }}
-                className={`flex items-center w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${isActive
-                  ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1'
-                  : 'text-blue-100 hover:bg-white/10 hover:text-white'
+              <div key={item.id} className="flex flex-col">
+                <button
+                  onClick={() => {
+                    if (isGroup) {
+                      toggleGroup(item.id);
+                    } else {
+                      navigate(item.id);
+                      setIsOpen(false);
+                    }
+                  }}
+                  className={`flex items-center justify-between w-full px-4 py-3.5 text-sm font-medium rounded-xl transition-all duration-200 group ${
+                    isActive 
+                      ? 'bg-white text-[#1e3a8a] shadow-lg font-bold translate-x-1' 
+                      : isGroupActive
+                        ? 'bg-white/10 text-white font-bold'
+                        : 'text-blue-100 hover:bg-white/10 hover:text-white'
                   }`}
-              >
-                <span className={`mr-3 transition-colors ${isActive ? 'text-[#1e3a8a]' : 'text-blue-300 group-hover:text-white'}`}>
-                  {item.icon}
-                </span>
-                {item.label}
-              </button>
+                >
+                  <div className="flex items-center">
+                    <span className={`mr-3 transition-colors ${isActive ? 'text-[#1e3a8a]' : 'text-blue-300 group-hover:text-white'}`}>
+                      {item.icon}
+                    </span>
+                    {item.label}
+                  </div>
+                  
+                  {isGroup && (
+                    <span className="text-blue-300 group-hover:text-white transition-transform duration-200">
+                      {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </span>
+                  )}
+                </button>
+
+                {/* SubMenu (Accordions) */}
+                {isGroup && isExpanded && (
+                  <div className="mt-1 ml-4 pl-4 border-l border-[#3b82f6]/30 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                    {item.subItems!.map((sub) => {
+                      const isSubActive = location.pathname === sub.id;
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            navigate(sub.id);
+                            setIsOpen(false);
+                          }}
+                          className={`flex items-center w-full px-3 py-2.5 text-xs font-medium rounded-lg transition-all duration-200 ${
+                            isSubActive
+                              ? 'bg-blue-500/20 text-white font-bold border border-blue-400/30'
+                              : 'text-blue-200 hover:bg-white/5 hover:text-white'
+                          }`}
+                        >
+                          <span className={`mr-2 ${isSubActive ? 'text-white' : 'text-blue-400'}`}>
+                            {sub.icon}
+                          </span>
+                          {sub.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

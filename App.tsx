@@ -12,6 +12,7 @@ import AdminLayout from './layouts/AdminLayout';
 import Navbar from './components/Navbar';
 import CookieConsent from './components/CookieConsent';
 import ProtectedRoute from './components/ProtectedRoute';
+import EventFinancePage from './components/EventFinancePage';
 
 // --- COMPONENTES PESADOS (Lazy Loading) ---
 // O Vite/Webpack criará arquivos .js separados para cada um destes
@@ -126,6 +127,7 @@ const AppRoutes = () => {
             <Route path="events/new" element={<EventFormPage />} />
             <Route path="events/edit/:id" element={<EventFormPage />} />
             <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
+            <Route path="events/:id/finance" element={<EventFinancePage />} />
             <Route path="financials" element={<Financials />} />
             <Route path="visitors" element={<Visitors />} />
 
