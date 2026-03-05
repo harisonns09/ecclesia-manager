@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Clock, LogOut, ShieldAlert, Baby, Phone, RefreshCw, AlertTriangle } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { kidsApi } from '../services/api';
-// Importação dos tipos que você forneceu
 import { CheckInKids } from '../types'; 
 import { toast } from 'sonner';
 import ConfirmationModal from './ConfirmationModal';
@@ -32,7 +31,6 @@ const KidsDashboardPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // QUERY: Tipada com a Interface CheckInKids
   const { data: kids = [], isLoading, isFetching, refetch } = useQuery<CheckInKids[]>({
     queryKey: ['kids-active', currentChurch?.id],
     queryFn: () => kidsApi.listActive(currentChurch!.id),

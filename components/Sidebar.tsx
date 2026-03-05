@@ -6,31 +6,27 @@ import {
   ChevronDown, ChevronRight, Settings, UsersRound
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { UserRole } from '../types';
 
 interface SidebarProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
 }
 
-// Tipo atualizado para suportar submenus
 type MenuItem = {
   id: string;
   label: string;
   icon: JSX.Element;
-  roles?: UserRole[];
-  subItems?: MenuItem[]; // Se tiver subItems, atua como um grupo
+  requiredPermission?: string;
+  subItems?: MenuItem[];
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, logout, exitChurch } = useApp();
+  const { currentUser, logout, exitChurch, hasPermission } = useApp();
 
-  // Estado para controlar quais grupos (accordions) estão abertos
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
-  // Estrutura de Menus Agrupados
   const menuItems: MenuItem[] = useMemo(() => [
     { 
       id: '/admin/dashboard', 
@@ -42,8 +38,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       label: 'Pessoas',
       icon: <UsersRound size={20} />,
       subItems: [
-        { id: '/admin/members', label: 'Membros', icon: <Users size={18} /> },
-        { id: '/admin/visitors', label: 'Visitantes', icon: <HeartHandshake size={18} /> },
+        { 
+          id: '/admin/members', 
+          label: 'Membros', 
+          icon: <Users size={18} />,
+          requiredPermission: 'GERENCIAR_MEMBROS'
+        },
+        { id: '/admin/visitors', 
+          label: 'Visitantes', 
+          icon: <HeartHandshake size={18} />,
+          requiredPermission: 'GERENCIAR_VISITANTES'},
       ]
     },
     {
@@ -51,49 +55,44 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
       label: 'Organização',
       icon: <Home size={20} />,
       subItems: [
-        { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={18} /> },
-        { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={18} /> },
-        { id: '/admin/events', label: 'Eventos', icon: <Calendar size={18} /> },
+        { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={18} />, requiredPermission: 'GERENCIAR_MINISTERIOS' },
+        { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={18} />, requiredPermission: 'GERENCIAR_GRUPOS' },
+        { id: '/admin/events', label: 'Eventos', icon: <Calendar size={18} />, requiredPermission: 'GERENCIAR_EVENTOS' },
       ]
     },
     {
       id: 'kids',
       label: 'Ministério Infantil',
       icon: <Baby size={20} />,
-      roles: ['ADMIN', 'KIDS'] as UserRole[],
+      requiredPermission: 'ACESSAR_KIDS',
       subItems: [
-        { id: '/admin/kids/dashboard', label: 'Painel Kids', icon: <LayoutDashboard size={18} />, roles: ['ADMIN', 'KIDS'] as UserRole[] },
-        { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={18} />, roles: ['ADMIN', 'KIDS'] as UserRole[] },
+        { id: '/admin/kids/dashboard', label: 'Painel Kids', icon: <LayoutDashboard size={18} />, requiredPermission: 'GERENCIAR_KIDS' },
+        { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={18} />, requiredPermission: 'GERENCIAR_KIDS' },
       ]
     },
     {
       id: 'admin',
       label: 'Administrativo',
       icon: <Settings size={20} />,
-      roles: ['ADMIN', 'TESOUREIRO'] as UserRole[], // Se o cara não for nenhum desses, oculta o grupo todo
       subItems: [
-        { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={18} />, roles: ['ADMIN', 'TESOUREIRO'] as UserRole[] },
-        { id: '/admin/users', label: 'Usuários & Acessos', icon: <Shield size={18} />, roles: ['ADMIN'] as UserRole[] },
-        { id: '/admin/audit-log', label: 'Log de Auditoria', icon: <Activity size={18} />, roles: ['ADMIN'] as UserRole[] },
+        { id: '/admin/financials', label: 'Financeiro', icon: <Wallet size={18} />, requiredPermission: 'VER_FINANCEIRO' },
+        { id: '/admin/users', label: 'Usuários & Acessos', icon: <Shield size={18} />, requiredPermission: 'GERENCIAR_ACESSOS' },
+        { id: '/admin/audit-log', label: 'Log de Auditoria', icon: <Activity size={18} />, requiredPermission: 'VER_AUDITORIA' },
       ]
     }
   ], []);
 
-  // Filtra itens e subitens baseados na Role do Usuário
   const visibleMenuItems = useMemo(() => {
     if (!currentUser) return [];
 
     return menuItems.map(item => {
-      // 1. Verifica se o usuário tem acesso ao grupo principal
-      if (item.roles && !item.roles.includes(currentUser.role as UserRole)) return null;
+      if (item.requiredPermission && !hasPermission(item.requiredPermission)) return null;
 
-      // 2. Se for um grupo, filtra os subitens
       if (item.subItems) {
         const filteredSubs = item.subItems.filter(sub => 
-          !sub.roles || sub.roles.includes(currentUser.role as UserRole)
+          !sub.requiredPermission || hasPermission(sub.requiredPermission)
         );
         
-        // Se após filtrar, o grupo ficar vazio, oculta o grupo inteiro
         if (filteredSubs.length === 0) return null;
         
         return { ...item, subItems: filteredSubs };
@@ -101,9 +100,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
       return item;
     }).filter(Boolean) as MenuItem[];
-  }, [menuItems, currentUser]);
+  }, [menuItems, currentUser, hasPermission]);
 
-  // Efeito para expandir automaticamente o grupo da página atual ao carregar
   useEffect(() => {
     const currentGroup = visibleMenuItems.find(item => 
       item.subItems?.some(sub => location.pathname === sub.id)
@@ -140,13 +138,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
 
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white font-bold text-lg border border-white/10 shadow-lg">
-              {currentUser?.name?.charAt(0).toUpperCase() || 'U'}
+              {currentUser?.user?.charAt(0).toUpperCase() || 'U'}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-white truncate leading-tight">{currentUser?.name}</p>
-              <p className="text-xs text-blue-200 truncate mt-0.5">{currentUser?.email}</p>
+              <p className="text-sm font-bold text-white truncate leading-tight">{currentUser?.user}</p>
               <span className="inline-block mt-2 px-2 py-0.5 rounded bg-blue-500/20 text-blue-200 text-[10px] font-bold uppercase tracking-wider border border-blue-500/30">
-                {currentUser?.role || 'Admin'}
+                {currentUser?.perfil || 'Usuário'}
               </span>
             </div>
           </div>
@@ -157,10 +154,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
             const isGroup = !!item.subItems;
             const isExpanded = expandedGroups[item.id];
             
-            // Verifica se um item simples está ativo
             const isActive = !isGroup && location.pathname === item.id;
             
-            // Verifica se algum subitem deste grupo está ativo
             const isGroupActive = isGroup && item.subItems?.some(sub => location.pathname === sub.id);
 
             return (
@@ -196,7 +191,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
                   )}
                 </button>
 
-                {/* SubMenu (Accordions) */}
                 {isGroup && isExpanded && (
                   <div className="mt-1 ml-4 pl-4 border-l border-[#3b82f6]/30 space-y-1 animate-in slide-in-from-top-2 duration-200">
                     {item.subItems!.map((sub) => {

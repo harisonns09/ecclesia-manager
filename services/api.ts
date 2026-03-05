@@ -122,15 +122,21 @@ export const transactionApi = {
     const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transactions`);
     return response.data;
   },
+
+  getByEvent: async (eventId: string) => {
+    const response = await api.get<Transaction[]>(`/api/transacoes/eventos/${eventId}/`);
+    return response.data;
+  },
+
   getById: async (churchId: string, transactionId: string) => {
     const response = await api.get<Transaction>(`/api/igrejas/${churchId}/transactions/${transactionId}`);
     return response.data;
   },
-  create: async (churchId: string, transaction: Omit<Transaction, 'id'>) => {
-    const response = await api.post<Transaction>(`/api/igrejas/${churchId}/transactions`, transaction);
+  novoPagamento: async (churchId: string, transaction: any) => {
+    const response = await api.post(`/api/transacoes`, transaction);
     return response.data;
   },
-  update: async (churchId: string, transactionId: string, transaction: Partial<Transaction>) => {
+  atualizarPagamento: async (churchId: string, transactionId: string, transaction: Partial<Transaction>) => {
     const response = await api.put<Transaction>(`/api/igrejas/${churchId}/transactions/${transactionId}`, transaction);
     return response.data;
   },
@@ -287,18 +293,6 @@ export const inscricaoApi = {
   }
 };
 
-export const financialApi = {
-  getByChurch: async (churchId: string) => {
-    const response = await api.get<Transaction[]>(`/api/igrejas/${churchId}/transacoes`);
-    return response.data;
-  },
-
-  create: async (churchId: string, transaction: Partial<Transaction>) => {
-    const response = await api.post<Transaction>(`/api/igrejas/${churchId}/transacoes`, transaction);
-    return response.data;
-  }
-};
-
 export const visitorApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<Member[]>(`/api/pessoas/igrejas/${churchId}/visitantes`);
@@ -363,6 +357,12 @@ export const userApi = {
   update: async (churchId: string, userId: string, userData: any) => {
     const payload = { ...userData, igrejaId: churchId };
     const response = await api.put(`/api/usuarios/${churchId}/${userId}`, payload);
+    return response.data;
+  },
+
+  getPermissions: async (churchId: string) => {
+    // Retorna uma lista de strings com o nome das permissões (Ex: ['GERENCIAR_MEMBROS', 'VER_FINANCEIRO'])
+    const response = await api.get<string[]>(`/api/usuarios/permissoes`); 
     return response.data;
   },
 

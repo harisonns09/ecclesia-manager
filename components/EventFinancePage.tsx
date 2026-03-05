@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, DollarSign, TrendingUp, Users, Clock, CheckCircle2, AlertCircle, CreditCard, Loader, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowLeft, DollarSign, TrendingUp, Loader, Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Receipt, Users, Calendar as CalendarIcon } from 'lucide-react';
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { eventApi } from '../services/api';
+import { eventApi, transactionApi } from '../services/api';
 import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
+import { Transaction } from '../types';
 
 const EventFinancePage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -13,10 +14,34 @@ const EventFinancePage: React.FC = () => {
 
     const [event, setEvent] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [lancamentos, setLancamentos] = useState<Transaction[]>([]);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [novoLancamento, setNovoLancamento] = useState({
+        descricao: '',
+        valor: '',
+        tipo: 'Saída' as 'Entrada' | 'Saída',
+        categoria: 'Outros'
+    });
+
+    const handleCurrencyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        let value = e.target.value.replace(/\D/g, "");
+        if (value === "") {
+            setNovoLancamento({ ...novoLancamento, valor: "" });
+            return;
+        }
+        const numericValue = Number(value) / 100;
+        const formatted = numericValue.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+        });
+        setNovoLancamento({ ...novoLancamento, valor: formatted });
+    };
 
     useEffect(() => {
         if (church?.id && id) {
             loadEventData();
+            loadTransactions();
         }
     }, [church?.id, id]);
 
@@ -25,7 +50,6 @@ const EventFinancePage: React.FC = () => {
         try {
             const data = await eventApi.getByChurch(church!.id);
             const foundEvent = data.find((e: any) => String(e.id) === id);
-
             if (!foundEvent) {
                 toast.error("Evento não encontrado.");
                 navigate('/admin/events');
@@ -33,256 +57,280 @@ const EventFinancePage: React.FC = () => {
             }
             setEvent(foundEvent);
         } catch (error) {
-            toast.error("Erro ao carregar dados financeiros.");
+            toast.error("Erro ao carregar dados do evento.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    if (isLoading) {
+    const loadTransactions = async () => {
+        try {
+            const response = await transactionApi.getByEvent(id!);
+            // Mapeamos o DTO do Java para a interface Transaction do Frontend
+            const mappedTransactions = response.map((t: any) => ({
+                id: String(t.id),
+                igrejaId: String(t.igrejaId),
+                descricao: t.descricao,
+                valor: Number(t.valor),
+                tipo: t.tipo === 'SAIDA' ? 'Saída' : 'Entrada',
+                categoria: t.categoria,
+                dataRegistro: t.dataRegistro, // dataRegistro do Back -> date do Front
+                eventoId: String(t.eventoId)
+            } as Transaction));
+            
+            setLancamentos(mappedTransactions);
+        } catch (error) {
+            console.error("Erro ao carregar lançamentos", error);
+        }
+    };
+
+    const handleAddLancamento = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!novoLancamento.descricao || !novoLancamento.valor) return;
+
+        try {
+            const valorNumerico = Number(novoLancamento.valor.replace(/\D/g, "")) / 100;
+
+            const payload = {
+                igrejaId: Number(church!.id),
+                descricao: novoLancamento.descricao,
+                valor: valorNumerico,
+                tipo: novoLancamento.tipo === 'Saída' ? 'SAIDA' : 'ENTRADA',
+                categoria: novoLancamento.tipo === 'Saída' ? 'Pagamentos' : 'Outros',
+                dataRegistro: new Date().toISOString(),
+                eventoId: Number(id)
+            };
+
+            const salvo = await transactionApi.novoPagamento(church!.id, payload as any);
+
+            const novoMapeado: Transaction = {
+                id: String(salvo.id),
+                igrejaId: String(church!.id),
+                descricao: salvo.descricao,
+                valor: Number(salvo.valor),
+                tipo: salvo.tipo === 'SAIDA' ? 'Saída' : 'Entrada' as any,
+                categoria: salvo.categoria as any,
+                dataRegistro: salvo.dataRegistro,
+                eventoId: id
+            };
+
+            setLancamentos([novoMapeado, ...lancamentos]);
+            setNovoLancamento({ descricao: '', valor: '', tipo: 'Saída', categoria: 'Outros' });
+            setIsModalOpen(false);
+            toast.success("Lançamento registrado!");
+        } catch (error) {
+            toast.error("Erro ao salvar lançamento.");
+        }
+    };
+
+    const removerLancamento = async (lancamentoId: string) => {
+        try {
+            await transactionApi.delete(church!.id, lancamentoId);
+            setLancamentos(lancamentos.filter(l => l.id !== lancamentoId));
+            toast.info("Removido com sucesso.");
+        } catch (error) {
+            toast.error("Erro ao remover.");
+        }
+    };
+
+    if (isLoading || !event) {
         return <div className="flex justify-center items-center h-[60vh]"><Loader className="animate-spin text-[#1e3a8a]" size={48} /></div>;
     }
 
-    if (!event) return null;
-
-    const inscricoes = event.inscricoes || [];
+    // --- CÁLCULOS TOTAIS ---
     const preco = Number(event.preco) || 0;
+    const inscritosPagos = (event.inscricoes || []).filter((i: any) => i.status?.toLowerCase() === 'pago');
+    const faturamentoInscricoes = inscritosPagos.reduce((soma: number, insc: any) => soma + (Number(insc.valorPago) || preco), 0);
+    const totalEntradasExtras = lancamentos.filter(l => l.tipo === 'Entrada').reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const totalDespesas = lancamentos.filter(l => l.tipo === 'Saída').reduce((acc, curr) => acc + Number(curr.valor), 0);
+    const receitaTotal = faturamentoInscricoes + totalEntradasExtras;
+    const saldoFinal = receitaTotal - totalDespesas;
 
-    const inscritosPagos = inscricoes.filter((i: any) => i.status?.toLowerCase() === 'pago');
-    const inscritosPendentes = inscricoes.filter((i: any) => i.status?.toLowerCase() === 'pendente');
-
-    const totalArrecadado = inscritosPagos.reduce((soma: number, insc: any) => soma + (Number(insc.valorPago) || preco), 0);
-
-    const receitaPendente = inscritosPendentes.length * preco;
-    const receitaPotencial = totalArrecadado + receitaPendente;
-
-    const ticketMedio = inscritosPagos.length > 0 ? totalArrecadado / inscritosPagos.length : 0;
-
-    // --- MÁGICA DO GRÁFICO DE CASCATA ---
+    // --- LÓGICA DO GRÁFICO CASCATA ---
     const generateChartData = () => {
-        if (inscritosPagos.length === 0) return [];
+        const dailyData: Record<string, { entrada: number; saida: number; dataRaw: Date }> = {};
 
-        // 1. Ordena os pagamentos cronologicamente
-        const sortedPagos = [...inscritosPagos].sort((a, b) =>
-            new Date(a.data_inscricao).getTime() - new Date(b.data_inscricao).getTime()
-        );
-
-        // 2. Agrupa por dia
-        const dailyData: Record<string, number> = {};
-        sortedPagos.forEach(insc => {
-            const dateStr = new Date(insc.data_inscricao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-            if (!dailyData[dateStr]) dailyData[dateStr] = 0;
-            dailyData[dateStr] += (Number(insc.valorPago) || preco);
+        inscritosPagos.forEach((insc: any) => {
+            const raw = new Date(insc.data_inscricao);
+            if (isNaN(raw.getTime())) return;
+            const dateStr = raw.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+            if (!dailyData[dateStr]) dailyData[dateStr] = { entrada: 0, saida: 0, dataRaw: raw };
+            dailyData[dateStr].entrada += (Number(insc.valorPago) || preco);
         });
 
-        // 3. Constrói o array com Ponto de Partida e Chegada (Start, End) para cada barra flutuar
+        lancamentos.forEach((l) => {
+            const raw = new Date(l.dataRegistro);
+            if (isNaN(raw.getTime())) return;
+            const dateStr = raw.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+            if (!dailyData[dateStr]) dailyData[dateStr] = { entrada: 0, saida: 0, dataRaw: raw };
+            if (l.tipo === 'Entrada') dailyData[dateStr].entrada += Number(l.valor);
+            else dailyData[dateStr].saida += Number(l.valor);
+        });
+
+        const sortedDates = Object.keys(dailyData).sort((a, b) => dailyData[a].dataRaw.getTime() - dailyData[b].dataRaw.getTime());
+        
         let acumulado = 0;
-        const data = Object.keys(dailyData).map(date => {
+        const data = sortedDates.map(dateStr => {
+            const day = dailyData[dateStr];
+            const netChange = day.entrada - day.saida;
             const start = acumulado;
-            acumulado += dailyData[date];
-            return {
-                data: date,
-                valorBase: [start, acumulado], // Define onde a barra começa e termina no eixo Y
-                diario: dailyData[date],
-                isTotal: false
-            };
+            const end = acumulado + netChange;
+            acumulado = end;
+            return { data: dateStr, valorBase: [start, end], netChange, isTotal: false };
         });
 
-        // 4. Adiciona a barra de "Total" no fim do gráfico
-        data.push({
-            data: 'Total',
-            valorBase: [0, acumulado],
-            diario: acumulado,
-            isTotal: true
-        });
-
+        if (data.length > 0) {
+            data.push({ data: 'Saldo Final', valorBase: [0, acumulado], netChange: acumulado, isTotal: true });
+        }
         return data;
     };
 
     const chartData = generateChartData();
 
-    // Tooltip Personalizado para explicar a Cascata
-    const CustomTooltip = ({ active, payload, label }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload;
-            return (
-                <div className="bg-white p-4 rounded-xl shadow-lg border border-gray-100">
-                    <p className="font-bold text-gray-800 mb-2">{label}</p>
-                    {data.isTotal ? (
-                        <p className="text-blue-600 font-medium text-sm">
-                            Fechamento: <span className="font-bold">R$ {data.diario.toFixed(2)}</span>
-                        </p>
-                    ) : (
-                        <>
-                            <p className="text-emerald-600 font-medium text-sm">
-                                Receita do dia: <span className="font-bold">+ R$ {data.diario.toFixed(2)}</span>
-                            </p>
-                            <p className="text-gray-500 font-medium text-xs mt-1">
-                                Acumulado até aqui: <span className="font-bold">R$ {data.valorBase[1].toFixed(2)}</span>
-                            </p>
-                        </>
-                    )}
-                </div>
-            );
-        }
-        return null;
-    };
-
     return (
         <div className="space-y-6 animate-in fade-in duration-500 pb-12">
-
+            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-200 pb-4">
                 <div>
                     <button onClick={() => navigate('/admin/events')} className="flex items-center text-sm font-semibold text-gray-500 hover:text-blue-600 mb-2 transition-colors">
-                        <ArrowLeft size={16} className="mr-1" /> Voltar para Eventos
+                        <ArrowLeft size={16} className="mr-1" /> Voltar
                     </button>
                     <h2 className="text-2xl font-bold text-[#0f172a] flex items-center gap-2">
                         <TrendingUp className="text-emerald-600" size={28} /> Financeiro do Evento
                     </h2>
-                    <p className="text-gray-500 text-sm mt-1 font-medium">{event.nomeEvento} <span className="mx-2">•</span> Ingresso: R$ {preco.toFixed(2)}</p>
+                    <p className="text-gray-500 text-sm mt-1">{event.nomeEvento} <span className="mx-2">•</span> Ingresso: R$ {preco.toFixed(2)}</p>
                 </div>
+                <button onClick={() => setIsModalOpen(true)} className="btn-primary flex items-center gap-2 px-6 py-3 shadow-lg shadow-blue-200">
+                    <Plus size={20} /> Lançar Movimentação
+                </button>
             </div>
 
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl p-8 shadow-lg text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mr-10 -mt-10 opacity-10">
-                    <DollarSign size={200} />
+            {/* Cards de Resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <p className="text-gray-500 text-xs font-bold uppercase mb-2">Receita Total</p>
+                    <h3 className="text-3xl font-black text-emerald-600">R$ {receitaTotal.toFixed(2)}</h3>
                 </div>
-
-                <div className="relative z-10 flex flex-col sm:flex-row justify-between sm:items-end gap-6">
-                    <div>
-                        <p className="text-emerald-100 font-semibold uppercase tracking-widest text-sm mb-2">Total Arrecadado</p>
-                        <h1 className="text-5xl sm:text-6xl font-black drop-shadow-sm">
-                            R$ {totalArrecadado.toFixed(2)}
-                        </h1>
-                        <p className="text-emerald-100 mt-3 font-medium flex items-center">
-                            <CheckCircle2 size={16} className="mr-1.5" /> {inscritosPagos.length} pagamentos confirmados
-                        </p>
-                    </div>
-                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl border border-white/30 text-center min-w-[160px]">
-                        <p className="text-emerald-50 text-xs font-bold uppercase mb-1">Receita Potencial</p>
-                        <p className="text-xl font-bold">R$ {receitaPotencial.toFixed(2)}</p>
-                    </div>
+                <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                    <p className="text-gray-500 text-xs font-bold uppercase mb-2">Despesas</p>
+                    <h3 className="text-3xl font-black text-red-500">R$ {totalDespesas.toFixed(2)}</h3>
+                </div>
+                <div className={`p-6 rounded-2xl border shadow-md flex flex-col justify-center ${saldoFinal >= 0 ? 'bg-blue-600 border-blue-700 text-white' : 'bg-red-600 border-red-700 text-white'}`}>
+                    <p className="opacity-80 text-xs font-bold uppercase mb-2">Saldo Líquido (Lucro)</p>
+                    <h3 className="text-4xl font-black">R$ {saldoFinal.toFixed(2)}</h3>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* --- CONTAINER DO GRÁFICO --- */}
+                {/* Waterfall Chart */}
                 <div className="lg:col-span-2 premium-card p-6 border border-gray-200">
-                    <div className="flex justify-between items-center mb-6">
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-800">Evolução das Receitas (Cascata)</h3>
-                            <p className="text-xs text-gray-500 mt-1">Impacto de cada dia no faturamento final</p>
-                        </div>
-                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-                            <TrendingUp size={20} />
-                        </div>
-                    </div>
-
+                    <h3 className="text-lg font-bold text-gray-800 mb-6">Fluxo de Caixa (Cascata)</h3>
                     <div className="h-[300px] w-full">
                         {chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={chartData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
                                     <XAxis dataKey="data" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `R$${val}`} />
-                                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
-                                    {/* A barra lê o array [start, end] para desenhar o pedaço exato da cascata */}
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `R$`} />
+                                    <Tooltip 
+                                        content={({ active, payload, label }) => {
+                                            if (active && payload && payload.length) {
+                                                const d = payload[0].payload;
+                                                return (
+                                                    <div className="bg-white p-3 rounded-lg shadow-xl border border-gray-100 min-w-[150px]">
+                                                        <p className="font-bold text-sm mb-2">{label}</p>
+                                                        <p className={`text-xs font-bold ${d.netChange >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                            Variação: R$ {d.netChange.toFixed(2)}
+                                                        </p>
+                                                        {!d.isTotal && <p className="text-[10px] text-gray-400 mt-1">Saldo Acumulado: R$ {d.valorBase[1].toFixed(2)}</p>}
+                                                    </div>
+                                                );
+                                            }
+                                            return null;
+                                        }}
+                                    />
                                     <Bar dataKey="valorBase" radius={[4, 4, 4, 4]} maxBarSize={50}>
-                                        {chartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.isTotal ? '#3b82f6' : '#10b981'} />
-                                        ))}
+                                        {chartData.map((entry, index) => {
+                                            let color = entry.netChange >= 0 ? '#10b981' : '#ef4444'; // Verde se positivo, Vermelho se negativo
+                                            if (entry.isTotal) {
+                                                color = entry.netChange >= 0 ? '#3b82f6' : '#ef4444'; // Azul se saldo final positivo, Vermelho se negativo
+                                            }
+                                            return <Cell key={`cell-${index}`} fill={color} />;
+                                        })}
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>
                         ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                                <CalendarIcon size={48} className="opacity-20 mb-3" />
-                                <p>Ainda não há pagamentos registrados para gerar o gráfico.</p>
-                            </div>
+                            <div className="h-full flex flex-col items-center justify-center text-gray-400 italic text-sm">Sem movimentações financeiras.</div>
                         )}
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-6">
-                    <div className="premium-card p-5 border-l-4 border-l-blue-500 flex-1">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Total de Inscrições</p>
-                                <h3 className="text-3xl font-extrabold text-gray-900">{inscricoes.length}</h3>
-                            </div>
-                            <div className="p-3 bg-blue-50 rounded-xl text-blue-600"><Users size={24} /></div>
-                        </div>
+                {/* Histórico Lateral */}
+                <div className="lg:col-span-1 premium-card p-0 overflow-hidden border border-gray-200 flex flex-col">
+                    <div className="p-4 border-b border-gray-100 bg-gray-50/80 flex justify-between items-center">
+                        <h3 className="font-bold text-[#0f172a] text-sm flex items-center gap-2"><Receipt size={16} className="text-blue-600" /> Histórico</h3>
                     </div>
-
-                    <div className="premium-card p-5 border-l-4 border-l-orange-400 flex-1">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-xs font-bold text-orange-700 uppercase tracking-wider mb-1">Pagamentos Pendentes</p>
-                                <h3 className="text-3xl font-extrabold text-orange-500">R$ {receitaPendente.toFixed(2)}</h3>
+                    <div className="overflow-y-auto max-h-[400px] divide-y divide-gray-100 bg-white">
+                        <div className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center"><Users size={14} /></div>
+                                <div><p className="font-bold text-gray-800 text-xs">Inscrições Pagas</p><p className="text-[10px] text-gray-400 uppercase font-bold">{inscritosPagos.length} PAGAMENTOS</p></div>
                             </div>
-                            <div className="p-3 bg-orange-100 rounded-xl text-orange-600"><Clock size={24} /></div>
+                            <p className="font-bold text-emerald-600 text-xs">+ R$ {faturamentoInscricoes.toFixed(2)}</p>
                         </div>
-                        <p className="text-xs font-medium text-orange-500/80 mt-2">{inscritosPendentes.length} boletos/pix aguardando</p>
-                    </div>
-
-                    <div className="premium-card p-5 border-l-4 border-l-gray-400 flex-1">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Ticket Médio Real</p>
-                                <h3 className="text-2xl font-bold text-gray-700">R$ {ticketMedio.toFixed(2)}</h3>
+                        {lancamentos.map((l) => (
+                            <div key={l.id} className="p-4 flex items-center justify-between group hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${l.tipo === 'Entrada' ? 'bg-emerald-50 text-emerald-500' : 'bg-red-50 text-red-500'}`}>
+                                        {l.tipo === 'Entrada' ? <ArrowUpCircle size={14} /> : <ArrowDownCircle size={14} />}
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="font-bold text-gray-800 text-xs truncate max-w-[120px]">{l.descricao}</p>
+                                        <p className="text-[10px] text-gray-400 uppercase font-bold">
+                                            {l.dataRegistro ? new Date(l.dataRegistro).toLocaleDateString('pt-BR') : 'Sem data'} • {l.categoria || 'EVENTO'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className={`font-bold text-xs ${l.tipo === 'Entrada' ? 'text-emerald-600' : 'text-red-600'}`}>
+                                        {l.tipo === 'Entrada' ? '+' : '-'} R$ {Number(l.valor).toFixed(2)}
+                                    </p>
+                                    <button onClick={() => removerLancamento(l.id)} className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
+                                </div>
                             </div>
-                            <div className="p-2 bg-gray-100 rounded-xl text-gray-500"><CreditCard size={20} /></div>
-                        </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
-            <div className="premium-card p-0 overflow-hidden border border-gray-200">
-                <div className="p-5 border-b border-gray-100 bg-gray-50/80 flex justify-between items-center">
-                    <h3 className="font-bold text-[#0f172a] text-lg">Pagamentos Recebidos</h3>
+            {/* Modal de Lançamento */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center"><h3 className="text-xl font-bold text-gray-800">Novo Lançamento</h3></div>
+                        <form onSubmit={handleAddLancamento} className="p-6 space-y-4">
+                            <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição</label>
+                                <input autoFocus className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: Aluguel do Som..." value={novoLancamento.descricao} onChange={e => setNovoLancamento({ ...novoLancamento, descricao: e.target.value })} />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Valor</label>
+                                    <input type="text" inputMode="numeric" className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500" value={novoLancamento.valor} onChange={handleCurrencyChange} />
+                                </div>
+                                <div><label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo</label>
+                                    <select className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none font-bold" value={novoLancamento.tipo} onChange={e => setNovoLancamento({ ...novoLancamento, tipo: e.target.value as any })}>
+                                        <option value="Saída">Despesa (-)</option><option value="Entrada">Receita (+)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 font-bold text-gray-500 hover:bg-gray-100 rounded-xl">Cancelar</button>
+                                <button type="submit" className="flex-1 py-3 font-bold bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700">Salvar</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
-
-                <div className="overflow-x-auto">
-                    {inscritosPagos.length === 0 ? (
-                        <div className="p-10 text-center text-gray-400 font-medium">Nenhum pagamento confirmado ainda.</div>
-                    ) : (
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-white text-gray-400 text-xs uppercase font-bold border-b border-gray-100">
-                                    <th className="px-6 py-4">Inscrito</th>
-                                    <th className="px-6 py-4">Data do Pagamento</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Valor</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {[...inscritosPagos].sort((a, b) => new Date(b.data_inscricao).getTime() - new Date(a.data_inscricao).getTime()).map((insc: any) => (
-                                    <tr key={insc.id} className="hover:bg-gray-50/80 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-gray-900">{insc.nome}</div>
-                                            <div className="text-xs text-gray-500 mt-0.5">{insc.email || insc.telefone}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 font-medium">
-                                            {new Date(insc.data_inscricao).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-3 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider flex items-center w-max border bg-emerald-50 text-emerald-700 border-emerald-100">
-                                                <CheckCircle2 size={12} className="mr-1.5" />
-                                                {insc.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-gray-800">
-                                            R$ {insc.valorPago?.toFixed(2) || preco.toFixed(2)}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    )}
-                </div>
-            </div>
-
+            )}
         </div>
     );
 };
