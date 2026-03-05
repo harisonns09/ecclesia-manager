@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as ReTooltip, Legend } from 'recharts';
 import { Plus, TrendingUp, TrendingDown, DollarSign, X, CheckCircle, XCircle, Loader } from 'lucide-react';
 import { Transaction, TransactionType, TransactionCategory } from '../types';
-import { financialApi } from '../services/api'; 
+import { transactionApi } from '../services/api'; 
 import { useApp } from '../contexts/AppContext'; // Contexto
 import { toast } from 'sonner'; // Toast
 
@@ -16,10 +16,10 @@ const Financials: React.FC = () => {
   
   // Estado do formulário
   const [newTrans, setNewTrans] = useState<Partial<Transaction>>({
-    description: '',
-    amount: 0,
-    type: TransactionType.INCOME,
-    category: TransactionCategory.TITHE,
+    descricao: '',
+    valor: 0,
+    tipo: TransactionType.INCOME,
+    categoria: TransactionCategory.TITHE,
     date: new Date().toISOString().split('T')[0]
   });
 
@@ -34,7 +34,7 @@ const Financials: React.FC = () => {
     if (!church) return;
     setIsLoading(true);
     try {
-      const data = await financialApi.getByChurch(church.id);
+      const data = await transactionApi.getByChurch(church.id);
       setTransactions(data);
     } catch (error) {
       console.error("Erro ao carregar finanças:", error);
@@ -53,7 +53,7 @@ const Financials: React.FC = () => {
     const toastId = toast.loading("Registrando transação...");
 
     try {
-      const createdTransaction = await financialApi.create(church.id, newTrans);
+      const createdTransaction = await transactionApi.novoPagamento(church.id, newTrans);
       
       setTransactions([createdTransaction, ...transactions]);
       
@@ -62,10 +62,10 @@ const Financials: React.FC = () => {
       
       // Limpa o formulário
       setNewTrans({
-        description: '',
-        amount: 0,
-        type: TransactionType.INCOME,
-        category: TransactionCategory.TITHE,
+        descricao: '',
+        valor: 0,
+        tipo: TransactionType.INCOME,
+        categoria: TransactionCategory.TITHE,
         date: new Date().toISOString().split('T')[0]
       });
 
@@ -77,9 +77,9 @@ const Financials: React.FC = () => {
 
   // Preparar dados para o gráfico
   const incomeByCategory = transactions
-    .filter(t => t.type === TransactionType.INCOME)
+    .filter(t => t.tipo === TransactionType.INCOME)
     .reduce((acc, curr) => {
-      acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
+      acc[curr.categoria] = (acc[curr.categoria] || 0) + curr.valor;
       return acc;
     }, {} as Record<string, number>);
 
@@ -140,15 +140,15 @@ const Financials: React.FC = () => {
                       {new Date(t.date).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-800 group-hover:text-[#1e3a8a] transition-colors">
-                        {t.description}
+                        {t.descricao}
                     </td>
                     <td className="px-6 py-4">
                         <span className="px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                            {t.category}
+                            {t.categoria}
                         </span>
                     </td>
-                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.type === TransactionType.INCOME ? 'text-emerald-600' : 'text-red-600'}`}>
-                      {t.type === TransactionType.INCOME ? '+' : '-'} R$ {Number(t.amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    <td className={`px-6 py-4 text-right font-bold text-sm ${t.tipo === TransactionType.INCOME ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {t.tipo === TransactionType.INCOME ? '+' : '-'} R$ {Number(t.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
@@ -229,9 +229,9 @@ const Financials: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 p-1 bg-gray-100 rounded-xl">
                 <button
                   type="button"
-                  onClick={() => setNewTrans({...newTrans, type: TransactionType.INCOME})}
+                  onClick={() => setNewTrans({...newTrans, tipo: TransactionType.INCOME})}
                   className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
-                    newTrans.type === TransactionType.INCOME 
+                    newTrans.tipo === TransactionType.INCOME 
                       ? 'bg-white text-emerald-600 shadow-sm' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -241,9 +241,9 @@ const Financials: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setNewTrans({...newTrans, type: TransactionType.EXPENSE})}
+                  onClick={() => setNewTrans({...newTrans, tipo: TransactionType.EXPENSE})}
                   className={`flex items-center justify-center py-2.5 px-4 rounded-lg font-bold transition-all text-sm ${
-                    newTrans.type === TransactionType.EXPENSE 
+                    newTrans.tipo === TransactionType.EXPENSE 
                       ? 'bg-white text-red-600 shadow-sm' 
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
@@ -259,8 +259,8 @@ const Financials: React.FC = () => {
                   type="text" required
                   className="input-field"
                   placeholder="Ex: Oferta de Domingo"
-                  value={newTrans.description}
-                  onChange={e => setNewTrans({...newTrans, description: e.target.value})}
+                  value={newTrans.descricao}
+                  onChange={e => setNewTrans({...newTrans, descricao: e.target.value})}
                 />
               </div>
 
@@ -271,16 +271,16 @@ const Financials: React.FC = () => {
                     type="number" required step="0.01"
                     className="input-field font-mono font-medium"
                     placeholder="0,00"
-                    value={newTrans.amount}
-                    onChange={e => setNewTrans({...newTrans, amount: Number(e.target.value)})}
+                    value={newTrans.valor}
+                    onChange={e => setNewTrans({...newTrans, valor: Number(e.target.value)})}
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">Categoria</label>
                   <select 
                     className="input-field appearance-none bg-white"
-                    value={newTrans.category}
-                    onChange={e => setNewTrans({...newTrans, category: e.target.value as TransactionCategory})}
+                    value={newTrans.categoria}
+                    onChange={e => setNewTrans({...newTrans, categoria: e.target.value as TransactionCategory})}
                   >
                     {Object.values(TransactionCategory).map(cat => (
                       <option key={cat} value={cat}>{cat}</option>

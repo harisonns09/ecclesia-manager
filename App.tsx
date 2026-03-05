@@ -128,18 +128,28 @@ const AppRoutes = () => {
             <Route path="events/edit/:id" element={<EventFormPage />} />
             <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
             <Route path="events/:id/finance" element={<EventFinancePage />} />
-            <Route path="financials" element={<Financials />} />
             <Route path="visitors" element={<Visitors />} />
 
-            <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            {/* Financeiro Restrito */}
+            <Route element={<ProtectedRoute requiredPermission="VER_FINANCEIRO" />}>
+               <Route path="financials" element={<Financials />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredPermission="GERENCIAR_ACESSOS" />}>
               <Route path="users" element={<SystemUsersPage />} />
+            </Route>
+
+            {/* Auditoria */}
+            <Route element={<ProtectedRoute requiredPermission="VER_AUDITORIA" />}>
               <Route path="audit-log" element={<AuditLogPage />} />
             </Route>
 
-            <Route element={<ProtectedRoute allowedRoles={['ADMIN', 'KIDS']} />}>
+            {/* Kids */}
+            <Route element={<ProtectedRoute requiredPermission="ACESSAR_KIDS" />}>
               <Route path="kids/checkin" element={<KidsCheckInPage />} />
               <Route path="kids/dashboard" element={<KidsDashboardPage />} />
             </Route>
+
             <Route index element={<Navigate to="dashboard" />} />
           </Route>
         </Route>

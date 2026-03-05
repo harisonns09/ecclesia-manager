@@ -42,6 +42,7 @@ export interface Member {
   status: MemberStatus;
   observacao?: string;
 }
+
 export enum TransactionType {
   INCOME = 'Entrada',
   EXPENSE = 'Saída'
@@ -54,17 +55,19 @@ export enum TransactionCategory {
   UTILITIES = 'Utilidades',
   SALARY = 'Salário',
   MAINTENANCE = 'Manutenção',
-  OTHER = 'Outros'
+  OTHER = 'Outros',
+  PAYMENT = 'Pagamento'
 }
 
 export interface Transaction {
   id: string;
-  churchId: string;
-  description: string;
-  amount: number;
-  type: TransactionType;
-  category: TransactionCategory;
-  date: string;
+  igrejaId: string;
+  descricao: string;
+  valor: number;
+  tipo: TransactionType;
+  categoria: TransactionCategory;
+  dataRegistro: string;
+  eventoId?: string;
 }
 
 export interface EventRegistration {
@@ -177,14 +180,13 @@ export interface CheckInKids {
   status: 'ATIVO' | 'FINALIZADO';
 }
 
-export type UserRole = 'ADMIN' | 'TESOUREIRO' | 'KIDS' | 'MEMBRO';
-
 export interface User {
   id: string;
-  user: string;
-  password: string;
-  role: UserRole;
+  user: string; // Login / Email
+  password?: string; // Coloque opcional, pois em listagens a senha não vem do backend
   igrejaId: string;
+  perfil: string; // Nome amigável do perfil (Ex: "Pastor", "Tesoureiro", "Secretária")
+  permissions: string[]; // Array de ações permitidas (Ex: ["VER_FINANCEIRO", "EXCLUIR_MEMBRO"])
 }
 
 export interface AuditLogEntry {
@@ -206,4 +208,12 @@ export interface SpringPage<T> {
   first: boolean;
   last: boolean;
   empty: boolean;
+}
+
+interface DecodedToken {
+  sub: string;
+  id: string;
+  nome: string;
+  groups: string[]; // <-- AQUI estão os cargos E as permissões
+  exp: number;
 }

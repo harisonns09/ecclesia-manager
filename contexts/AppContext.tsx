@@ -1,23 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { Church } from '../types';
-import { churchApi, authApi, api } from '../services/api'; // Adicionamos o authApi
+import { Church, User } from '../types'; // <-- Agora importamos o User do types.ts
+import { churchApi, authApi, api } from '../services/api';
 
-// Interface para mapear o que vem de dentro do Token JWT (Ajustado para bater com seu TokenService)
+// Interface para mapear o que vem de dentro do Token JWT do Quarkus
 interface DecodedToken {
   sub: string; // E-mail
-  id: string;  // O ID do usuário (pode vir como número do Java, tratamos no código)
+  id: string;  // O ID do usuário
   nome: string;
-  role: string;
+  groups: string[]; // <-- Trocamos 'role' por 'groups' (onde vêm os perfis e permissões)
   exp: number;
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
 }
 
 interface AppContextData {
@@ -27,7 +20,6 @@ interface AppContextData {
   churches: Church[];
   isLoadingChurches: boolean;
 
-  // Login agora pede email e senha de volta!
   login: (email: string, pass: string) => Promise<void>; 
   logout: () => void;
   selectChurch: (church: Church) => void;
@@ -36,6 +28,9 @@ interface AppContextData {
   addChurchList: (church: Church) => void;
   updateChurchList: (church: Church) => void;
   removeChurchList: (id: string) => void;
+
+  // 🔥 Nova função mágica para verificar permissões
+  hasPermission: (permission: string) => boolean; 
 }
 
 const AppContext = createContext<AppContextData>({} as AppContextData);
@@ -55,6 +50,35 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [churches, setChurches] = useState<Church[]>([]);
   const [isLoadingChurches, setIsLoadingChurches] = useState(true);
 
+  // --- NOVA FUNÇÃO DE PERMISSÕES ---
+  const hasPermission = (permission: string) => {
+    if (!currentUser) return false;
+
+    if (currentUser.perfil === 'ADMIN') return true;
+
+    return currentUser.permissions.includes(permission);
+  };
+
+  // Função auxiliar para processar o token (evita repetição de código no login e no init)
+  const processToken = (token: string) => {
+    const decoded = jwtDecode<DecodedToken>(token);
+    
+    // No Quarkus, enviamos o Perfil e as Permissões no array 'groups'.
+    // Geralmente o Perfil é o primeiro item ou segue um padrão.
+    // Se o seu backend envia o perfil no início, fazemos assim:
+    const allGroups = decoded.groups || [];
+    const perfilBase = allGroups[0] || 'MEMBRO'; 
+    const permissoes = allGroups; // O front trata o array todo como permissões para o hasPermission
+
+    return {
+      id: String(decoded.id),
+      user: decoded.nome,
+      igrejaId: currentChurch?.id || '',
+      perfil: perfilBase, 
+      permissions: permissoes
+    };
+  };
+
   // --- EFEITOS DE INICIALIZAÇÃO ---
   useEffect(() => {
     loadChurches();
@@ -62,18 +86,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const savedToken = localStorage.getItem('church_token');
     if (savedToken) {
       try {
-        const decoded = jwtDecode<DecodedToken>(savedToken);
-        
-        if (decoded.exp * 1000 < Date.now()) {
+        if (jwtDecode(savedToken).exp! * 1000 < Date.now()) {
           logout();
         } else {
           api.defaults.headers.common['Authorization'] = `Bearer ${savedToken}`;
-          setCurrentUser({
-            id: String(decoded.id), // Garante que é string
-            name: decoded.nome,
-            email: decoded.sub,
-            role: decoded.role
-          });
+          setCurrentUser(processToken(savedToken)); // Usa a função auxiliar
           setIsAuthenticated(true);
         }
       } catch (error) {
@@ -96,41 +113,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // --- AÇÕES ---
 
-  // Agora o Contexto é quem chama o Backend!
   const login = async (email: string, pass: string) => {
     try {
-      // 1. Chama a API do Spring Boot
       const response = await authApi.login(email, pass);
-      const token = response.token; // Pega o token do LoginResponseDTO do Java
+      const token = response.token; 
 
-      if (!token) {
-          throw new Error("Token não recebido da API");
-      }
+      if (!token) throw new Error("Token não recebido da API");
 
-      // 2. Salva o token
       localStorage.setItem('church_token', token);
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
-      // 3. Lê quem é o usuário de dentro do token
-      const decoded = jwtDecode<DecodedToken>(token);
-      
-      setCurrentUser({
-        id: String(decoded.id),
-        name: decoded.nome,
-        email: decoded.sub,
-        role: decoded.role
-      });
+      setCurrentUser(processToken(token)); // Usa a função auxiliar
       setIsAuthenticated(true);
       
-      // 4. Redirecionamento Inteligente
       const state = location.state as { from?: Location };
-      if (state?.from?.pathname) {
-          navigate(state.from.pathname + state.from.search);
-      } else {
-          navigate('/admin/dashboard');
-      }
+      navigate(state?.from?.pathname ? (state.from.pathname + state.from.search) : '/admin/dashboard');
     } catch (error) {
-      // O erro 'cai' aqui se a senha estiver errada, e nós repassamos para a tela de Login exibir
       console.error("Erro na autenticação:", error);
       throw error; 
     }
@@ -171,13 +169,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       currentChurch,
       churches,
       isLoadingChurches,
-      login, // Exporta a função que faz tudo
+      login,
       logout,
       selectChurch,
       exitChurch,
       addChurchList,
       updateChurchList,
-      removeChurchList
+      removeChurchList,
+      hasPermission // <-- Função exportada com sucesso
     }}>
       {children}
     </AppContext.Provider>

@@ -33,7 +33,21 @@ const Events: React.FC<EventsProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const isUsingProps = propEvents !== undefined;
-  const displayEvents = isUsingProps ? propEvents : internalEvents;
+  const rawEvents = isUsingProps ? propEvents : internalEvents;
+
+  // Filtra apenas eventos que ainda não passaram
+  const displayEvents = React.useMemo(() => {
+    // Pegamos a data de hoje no formato YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
+    // Se for Admin, talvez você queira ver tudo (histórico). 
+    // Se não, filtramos para mostrar apenas >= hoje.
+    if (isAdmin) return rawEvents; 
+
+    return rawEvents.filter(event => event.dataEvento >= today);
+  }, [rawEvents, isAdmin]);
+
+
 
   useEffect(() => {
     if (!isUsingProps && church?.id) {
@@ -101,7 +115,7 @@ const Events: React.FC<EventsProps> = ({
         setIsSearchModalOpen(false);
         setSearchId('');
     }
-  };
+  };  
 
   if (!church) return null;
 
