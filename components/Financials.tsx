@@ -20,7 +20,7 @@ const Financials: React.FC = () => {
     valor: 0,
     tipo: TransactionType.INCOME,
     categoria: TransactionCategory.TITHE,
-    date: new Date().toISOString().split('T')[0]
+    dataRegistro: new Date().toISOString().split('T')[0]
   });
 
   // 1. Carregar transações
@@ -66,7 +66,7 @@ const Financials: React.FC = () => {
         valor: 0,
         tipo: TransactionType.INCOME,
         categoria: TransactionCategory.TITHE,
-        date: new Date().toISOString().split('T')[0]
+        dataRegistro: new Date().toISOString().split('T')[0]
       });
 
     } catch (error) {
@@ -137,7 +137,7 @@ const Financials: React.FC = () => {
                 ) : transactions.map((t) => (
                   <tr key={t.id} className="hover:bg-[#eff6ff]/30 transition-colors group">
                     <td className="px-6 py-4 text-sm text-gray-500 font-medium">
-                      {new Date(t.date).toLocaleDateString('pt-BR')}
+                      {new Date(t.dataRegistro).toLocaleDateString('pt-BR')}
                     </td>
                     <td className="px-6 py-4 font-semibold text-gray-800 group-hover:text-[#1e3a8a] transition-colors">
                         {t.descricao}
@@ -294,8 +294,8 @@ const Financials: React.FC = () => {
                 <input 
                   type="date" required
                   className="input-field"
-                  value={newTrans.date}
-                  onChange={e => setNewTrans({...newTrans, date: e.target.value})}
+                  value={newTrans.dataRegistro}
+                  onChange={e => setNewTrans({...newTrans, dataRegistro: e.target.value})}
                 />
               </div>
 

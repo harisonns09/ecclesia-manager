@@ -2,8 +2,8 @@ import axios from 'axios';
 import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8080', 
-  //baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
+  //baseURL: 'http://localhost:8080', 
+  baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
 });
 
 api.interceptors.request.use((config) => {
