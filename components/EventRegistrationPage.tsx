@@ -292,7 +292,7 @@ const EventRegistrationPage: React.FC = () => {
           <div className="bg-gray-50 rounded-2xl p-6 mb-8 text-left border border-gray-100 shadow-inner">
             <h4 className="text-xs font-bold text-gray-400 uppercase mb-4 tracking-wider">Detalhes do Evento</h4>
             <div className="space-y-2">
-              <p className="text-gray-700 flex items-center font-medium"><Calendar size={16} className="mr-3 text-[#1e3a8a]" /> {new Date(event.dataEvento).toLocaleDateString('pt-BR')}</p>
+              <p className="text-gray-700 flex items-center font-medium"><Calendar size={16} className="mr-3 text-[#1e3a8a]" /> {new Date(event.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
               <p className="text-gray-700 flex items-center font-medium"><MapPin size={16} className="mr-3 text-[#1e3a8a]" /> {event.local}</p>
               <p className="text-gray-700 flex items-center font-medium"><Clock size={16} className="mr-3 text-[#1e3a8a]" /> {event.horario}</p>
             </div>
