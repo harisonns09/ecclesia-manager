@@ -165,7 +165,7 @@ const RegistrationStatusPage: React.FC = () => {
                             <div className="flex-1">
                                 <h3 className="font-bold text-[#0f172a] text-lg mb-2">{reg.evento?.nomeEvento || "Evento"}</h3>
                                 <div className="flex flex-wrap items-center text-sm text-gray-500 gap-4 mb-3">
-                                    <span className="flex items-center bg-gray-50 px-2 py-1 rounded"><Calendar size={14} className="mr-1.5 text-blue-500"/> {reg.evento?.dataEvento ? new Date(reg.evento.dataEvento).toLocaleDateString('pt-BR') : 'Data n/d'}</span>
+                                    <span className="flex items-center bg-gray-50 px-2 py-1 rounded"><Calendar size={14} className="mr-1.5 text-blue-500"/> {reg.evento?.dataEvento ? new Date(reg.evento.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR') : 'Data n/d'}</span>
                                     <span className="flex items-center bg-gray-50 px-2 py-1 rounded"><MapPin size={14} className="mr-1.5 text-blue-500"/> {reg.evento?.local || 'Local n/d'}</span>
                                 </div>
                                 {renderStatusBadgeMin(reg.status)}
