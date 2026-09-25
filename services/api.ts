@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest } from '../types';
+import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product } from '../types';
 
 export const api = axios.create({
-  //baseURL: 'http://localhost:8080', 
-  baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
+  baseURL: 'http://localhost:8080', 
+  //baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
 });
 
 api.interceptors.request.use((config) => {
@@ -264,6 +264,28 @@ export const smallGroupApi = {
   },
 };
 
+export const productApi = {
+  getByChurch: async (churchId: string) => {
+    const response = await api.get<Product[]>(`/api/produtos/igrejas/${churchId}`);
+    return response.data;
+  },
+  getById: async (churchId: string, productId: string) => {
+    const response = await api.get<Product>(`/api/produtos/igrejas/${churchId}/${productId}`);
+    return response.data;
+  },
+  create: async (churchId: string, product: Omit<Product, 'id'>) => {
+    const response = await api.post<Product>(`/api/produtos/igrejas/${churchId}`, product);
+    return response.data;
+  },
+  update: async (churchId: string, productId: string, product: Partial<Product>) => {
+    const response = await api.put<Product>(`/api/produtos/igrejas/${churchId}/${productId}`, product);
+    return response.data;
+  },
+  delete: async (churchId: string, productId: string) => {
+    await api.delete(`/api/produtos/igrejas/${churchId}/${productId}`);
+  },
+};
+
 export const prayerRequestApi = {
   getByChurch: async (churchId: string) => {
     const response = await api.get<PrayerRequest[]>(`/api/igrejas/${churchId}/prayer-requests`);
@@ -400,4 +422,3 @@ export const dashboardApi = {
     return response.data;
   }
 };
-

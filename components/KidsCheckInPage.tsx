@@ -27,6 +27,7 @@ const KidsCheckInPage: React.FC = () => {
         nomeCrianca: '',
         nomeResponsavel: '',
         telefoneResponsavel: '',
+        sala: '',
         alergias: '',
         observacoes: ''
     }
@@ -79,6 +80,7 @@ const KidsCheckInPage: React.FC = () => {
             {checkInSuccess.codigoSeguranca}
           </p>
           <p className="text-sm text-gray-500">{checkInSuccess.nomeCrianca}</p>
+          <p className="text-xs font-bold text-indigo-600 uppercase mt-2">{checkInSuccess.sala}</p>
         </div>
 
         <div className="flex gap-4 print:hidden">
@@ -90,11 +92,15 @@ const KidsCheckInPage: React.FC = () => {
           </button>
         </div>
 
+        {/* Etiqueta de Impressão (CSS Print) */}
         <div className="hidden print:block fixed top-0 left-0 w-[80mm] h-auto bg-white p-1 text-black z-[9999]">
              <div className="text-center border-2 border-black p-2 rounded-lg box-border">
                 <h1 className="text-xl font-bold truncate leading-tight">{checkInSuccess.nomeCrianca}</h1>
                 <h2 className="text-4xl font-black my-2 tracking-widest">{checkInSuccess.codigoSeguranca}</h2>
                 <div className="text-xs text-left mt-2 border-t border-black pt-1 leading-snug">
+                    <p className="font-bold uppercase text-[14px] text-center border-b border-black pb-1 mb-1">
+                        SALA: {checkInSuccess.sala}
+                    </p>
                     <p><strong>Resp:</strong> {checkInSuccess.nomeResponsavel}</p>
                     <p><strong>Tel:</strong> {checkInSuccess.telefoneResponsavel}</p>
                     {checkInSuccess.alergias && (
@@ -141,6 +147,23 @@ const KidsCheckInPage: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* NOVO CAMPO: Sala/Turma */}
+                <div>
+                    <label className="label-field">Turma / Sala</label>
+                    <select 
+                        {...register('sala')}
+                        className={`input-field ${errors.sala ? 'border-red-500 bg-red-50' : ''}`}
+                    >
+                        <option value="">Selecione a sala...</option>
+                        <option value="Berçário (0 a 2 anos)">Berçário (0 a 2 anos)</option>
+                        <option value="Maternal (3 a 5 anos)">Maternal (3 a 5 anos)</option>
+                        <option value="Primários (6 a 8 anos)">Primários (6 a 8 anos)</option>
+                        <option value="Juniores (9 a 12 anos)">Juniores (9 a 12 anos)</option>
+                    </select>
+                    {/* @ts-ignore - Caso o schema antigo ainda esteja ativo enquanto atualiza */}
+                    {errors.sala && <p className="text-red-500 text-xs mt-1">{errors.sala.message}</p>}
+                </div>
+
                 <div>
                     <label className="label-field">Alergias / Restrições</label>
                     <input 
@@ -149,14 +172,15 @@ const KidsCheckInPage: React.FC = () => {
                         placeholder="Ex: Amendoim, Lactose..." 
                     />
                 </div>
-                <div>
-                    <label className="label-field">Observações Gerais</label>
-                    <input 
-                        {...register('observacoes')} 
-                        className="input-field" 
-                        placeholder="Ex: Mochila azul..." 
-                    />
-                </div>
+            </div>
+
+            <div>
+                <label className="label-field">Observações Gerais</label>
+                <input 
+                    {...register('observacoes')} 
+                    className="input-field" 
+                    placeholder="Ex: Mochila azul, não gosta de barulho..." 
+                />
             </div>
         </div>
 

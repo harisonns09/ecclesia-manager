@@ -23,6 +23,8 @@ const Ministries = lazy(() => import('./components/Ministries'));
 const SmallGroups = lazy(() => import('./components/SmallGroups'));
 const Events = lazy(() => import('./components/Events'));
 const Financials = lazy(() => import('./components/Financials'));
+const AdminProductsPage = lazy(() => import('./components/AdminProductsPage'));
+const ProductFormPage = lazy(() => import('./components/ProductFormPage'));
 const ChurchSelector = lazy(() => import('./components/ChurchSelector'));
 const PublicHome = lazy(() => import('./components/PublicHome'));
 const Login = lazy(() => import('./components/Login'));
@@ -128,6 +130,9 @@ const AppRoutes = () => {
             <Route path="events/edit/:id" element={<EventFormPage />} />
             <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
             <Route path="events/:id/finance" element={<EventFinancePage />} />
+            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="products/new" element={<ProductFormPage />} />
+            <Route path="products/edit/:id" element={<ProductFormPage />} />
             <Route path="visitors" element={<Visitors />} />
 
             {/* Financeiro Restrito */}
@@ -145,7 +150,7 @@ const AppRoutes = () => {
             </Route>
 
             {/* Kids */}
-            <Route element={<ProtectedRoute requiredPermission="ACESSAR_KIDS" />}>
+            <Route element={<ProtectedRoute requiredPermission="GERENCIAR_KIDS" />}>
               <Route path="kids/checkin" element={<KidsCheckInPage />} />
               <Route path="kids/dashboard" element={<KidsDashboardPage />} />
             </Route>

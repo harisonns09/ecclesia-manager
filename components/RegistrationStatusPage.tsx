@@ -215,6 +215,7 @@ const RegistrationStatusPage: React.FC = () => {
                     
                     <div className="space-y-2 text-sm text-gray-600">
                         <div className="flex items-center"><Calendar size={16} className="mr-2.5 text-[#1e3a8a]" /> {selectedRegistration.evento?.dataEvento ? new Date(selectedRegistration.evento.dataEvento).toLocaleDateString('pt-BR') : 'Data a definir'}</div>
+                        <div className="flex items-center"><Calendar size={16} className="mr-2.5 text-[#1e3a8a]" /> {selectedRegistration.evento?.dataEvento ? new Date(selectedRegistration.evento.dataEvento + 'T00:00:00').toLocaleDateString('pt-BR') : 'Data a definir'}</div>
                         <div className="flex items-center"><MapPin size={16} className="mr-2.5 text-[#1e3a8a]" /> {selectedRegistration.evento?.local || 'Local a definir'}</div>
                     </div>
                 </div>

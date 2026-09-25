@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Activity, Shield, Users, Wallet, Calendar, 
-  LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby, 
-  ChevronDown, ChevronRight, Settings, UsersRound
+  LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby, ShoppingBag,
+  ChevronDown, ChevronRight, Settings, UsersRound 
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
@@ -58,13 +58,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={18} />, requiredPermission: 'GERENCIAR_MINISTERIOS' },
         { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={18} />, requiredPermission: 'GERENCIAR_GRUPOS' },
         { id: '/admin/events', label: 'Eventos', icon: <Calendar size={18} />, requiredPermission: 'GERENCIAR_EVENTOS' },
+        { id: '/admin/products', label: 'Loja', icon: <ShoppingBag size={18} /> },
       ]
     },
     {
       id: 'kids',
       label: 'Ministério Infantil',
       icon: <Baby size={20} />,
-      requiredPermission: 'ACESSAR_KIDS',
+      requiredPermission: 'GERENCIAR_KIDS',
       subItems: [
         { id: '/admin/kids/dashboard', label: 'Painel Kids', icon: <LayoutDashboard size={18} />, requiredPermission: 'GERENCIAR_KIDS' },
         { id: '/admin/kids/checkin', label: 'Check-in Kids', icon: <Baby size={18} />, requiredPermission: 'GERENCIAR_KIDS' },
