@@ -122,18 +122,73 @@ export interface Member {
 //                               PRODUCTS
 // ========================================================================
 
-/**
- * Representa um produto da loja da igreja.
- */
+// Tipagem para Produtos
 export interface Product {
-  id: string;
-  igrejaId: string;
+  id: string; // ou number, dependendo de como consome os IDs no front
   nome: string;
   descricao?: string;
   preco: number;
-  imageUrl?: string;
   estoque: number;
+  imageUrl?: string;
   ativo: boolean;
+  igrejaId?: string; // Opcional porque a rota já identifica a igreja
+}
+
+export type ProductFormData = Omit<Product, 'id' | 'igrejaId'>;
+
+// Tipagem para Pedidos (Vendas)
+export interface OrderItemRequestDTO {
+  produtoId: string;
+  quantidade: number;
+}
+
+export interface OrderRequestDTO {
+  pessoaId: string;
+  itens: OrderItemRequestDTO[];
+}
+
+// Novo tipo para pedidos públicos (coleta informações do comprador diretamente)
+export interface PublicOrderItemRequestDTO {
+  produtoId: string;
+  quantidade: number;
+}
+
+export interface PublicOrderRequestDTO {
+  nomeComprador: string;
+  emailComprador: string;
+  telefoneComprador: string;
+  cpfComprador?: string; // Opcional, mas útil para gateways de pagamento
+  itens: PublicOrderItemRequestDTO[];
+}
+
+// Novo tipo para requisição de checkout de produto público
+export interface PublicProductCheckoutRequestDTO {
+  nomeComprador: string;
+  emailComprador: string;
+  telefoneComprador: string;
+  cpfComprador?: string;
+  produtoId: string;
+  quantidade: number;
+  amount: number; // Valor total para o gateway de pagamento
+}
+
+export interface OrderItem {
+  id: string;
+  produto: Product;
+  quantidade: number;
+  precoUnitario: number;
+}
+
+export interface Order {
+  id: string;
+  igrejaId: string;
+  compradorId: string;
+  itens: OrderItem[];
+  valorTotal: number;
+  statusPagamento: 'PENDENTE' | 'PAGO' | 'CANCELADO';
+  linkPagamento?: string;
+  transacaoId?: string;
+  dataCriacao: string;
 }
 
 // ========================================================================
