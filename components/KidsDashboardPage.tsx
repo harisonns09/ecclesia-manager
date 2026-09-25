@@ -25,6 +25,9 @@ const KidsDashboardPage: React.FC = () => {
   const [, setNow] = useState(new Date());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedKid, setSelectedKid] = useState<CheckInKids | null>(null);
+  
+  // Estado para as Abas de Salas
+  const [activeTab, setActiveTab] = useState<string>('Todas');
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000);
@@ -60,6 +63,12 @@ const KidsDashboardPage: React.FC = () => {
     <div className="p-8 text-center text-gray-500">Selecione uma igreja para visualizar o painel.</div>
   );
 
+  // Extrair as salas ativas dinamicamente
+  const salasAtivas = ['Todas', ...Array.from(new Set(kids.map(k => k.sala).filter(Boolean)))];
+  
+  // Filtrar as crianças baseadas na aba selecionada
+  const kidsFiltradas = activeTab === 'Todas' ? kids : kids.filter(k => k.sala === activeTab);
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <ConfirmationModal
@@ -84,7 +93,7 @@ const KidsDashboardPage: React.FC = () => {
                 <Baby className="text-indigo-600" size={28}/>
                 Painel Kids 
                 <span className="bg-indigo-100 text-indigo-800 text-sm py-0.5 px-2.5 rounded-full ml-2">
-                    {kids.length} {kids.length === 1 ? 'criança' : 'crianças'}
+                    {kidsFiltradas.length} {kidsFiltradas.length === 1 ? 'criança' : 'crianças'}
                 </span>
             </h2>
             <p className="text-gray-500 text-sm mt-1">Gerenciamento em tempo real.</p>
@@ -108,73 +117,103 @@ const KidsDashboardPage: React.FC = () => {
             <p className="text-gray-500 animate-pulse">Carregando painel...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {kids.map((kid) => {
-              const permanencia = getTempoPermanencia(kid.dataEntrada);
-              const isOverdue = permanencia.totalMinutos >= 120; // Alerta após 2h
+        <>
+          {/* Menu de Abas por Sala */}
+          {salasAtivas.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {salasAtivas.map(sala => (
+                <button
+                  key={sala}
+                  onClick={() => setActiveTab(sala)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                    activeTab === sala 
+                      ? 'bg-indigo-600 text-white shadow-md' 
+                      : 'bg-white text-gray-500 hover:bg-gray-100 border border-gray-200'
+                  }`}
+                >
+                  {sala} {sala !== 'Todas' && `(${kids.filter(k => k.sala === sala).length})`}
+                </button>
+              ))}
+            </div>
+          )}
 
-              return (
-                <div key={kid.id} className={`bg-white rounded-xl p-5 shadow-sm border ${isOverdue ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-200'} flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group`}>
-                    <div className={`absolute top-0 left-0 w-1.5 h-full ${isOverdue ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
+          {/* Grid de Cards Filtrada */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {kidsFiltradas.map((kid) => {
+                const permanencia = getTempoPermanencia(kid.dataEntrada);
+                const isOverdue = permanencia.totalMinutos >= 120; // Alerta após 2h
 
-                    <div>
-                        <div className="flex justify-between items-start mb-3 pl-2">
-                            <div className="min-w-0 pr-2">
-                                <h3 className="font-bold text-lg text-gray-900 truncate">{kid.nomeCrianca}</h3>
-                                <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
-                                    <Clock size={12}/> Entrada: {new Date(kid.dataEntrada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                </p>
-                            </div>
-                            <span className="bg-gray-100 text-gray-800 font-mono font-bold text-sm px-2.5 py-1 rounded border border-gray-200 shrink-0">
-                                {kid.codigoSeguranca}
-                            </span>
-                        </div>
+                return (
+                  <div key={kid.id} className={`bg-white rounded-xl p-5 shadow-sm border ${isOverdue ? 'border-amber-200 ring-1 ring-amber-100' : 'border-gray-200'} flex flex-col justify-between hover:shadow-md transition-all relative overflow-hidden group`}>
+                      <div className={`absolute top-0 left-0 w-1.5 h-full ${isOverdue ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
 
-                        <div className="bg-gray-50 rounded-lg p-3 ml-2 space-y-2 border border-gray-100">
-                            <p className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                                <ShieldAlert size={14} className="text-indigo-400"/> {kid.nomeResponsavel}
-                            </p>
-                            <p className="flex items-center gap-2 text-xs text-gray-600">
-                                <Phone size={14} className="text-gray-400"/> {kid.telefoneResponsavel}
-                            </p>
-                        </div>
+                      <div>
+                          <div className="flex justify-between items-start mb-3 pl-2">
+                              <div className="min-w-0 pr-2">
+                                  <h3 className="font-bold text-lg text-gray-900 truncate">{kid.nomeCrianca}</h3>
+                                  <p className="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                      <Clock size={12}/> Entrada: {new Date(kid.dataEntrada).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                  </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                  <span className="bg-gray-100 text-gray-800 font-mono font-bold text-sm px-2.5 py-1 rounded border border-gray-200">
+                                      {kid.codigoSeguranca}
+                                  </span>
+                                  {activeTab === 'Todas' && kid.sala && (
+                                    <span className="text-[10px] uppercase font-bold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded">
+                                      {kid.sala.split('(')[0]} {/* Mostra só o nome da sala sem as idades para economizar espaço */}
+                                    </span>
+                                  )}
+                              </div>
+                          </div>
 
-                        {/* Campo Alergias vindo da Interface CheckInKids */}
-                        {kid.alergias && (
-                            <div className="mt-3 ml-2 bg-red-50 text-red-700 text-[11px] font-bold p-2 rounded border border-red-100 flex items-start gap-2">
-                                <AlertTriangle size={14} className="shrink-0" />
-                                <span>ALERGIA: {kid.alergias}</span>
-                            </div>
-                        )}
-                    </div>
+                          <div className="bg-gray-50 rounded-lg p-3 ml-2 space-y-2 border border-gray-100">
+                              <p className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                                  <ShieldAlert size={14} className="text-indigo-400"/> {kid.nomeResponsavel}
+                              </p>
+                              <p className="flex items-center gap-2 text-xs text-gray-600">
+                                  <Phone size={14} className="text-gray-400"/> {kid.telefoneResponsavel}
+                              </p>
+                          </div>
 
-                    <div className="mt-4 ml-2 pt-4 border-t border-gray-100 flex items-center justify-between">
-                        <div className="text-xs font-medium flex flex-col">
-                            <span className="text-gray-400">Permanência:</span>
-                            <span className={`${isOverdue ? 'text-amber-600' : 'text-indigo-600'} font-bold`}>
-                                {permanencia.texto}
-                            </span>
-                        </div>
-                        <button 
-                            onClick={() => handleCheckOutClick(kid)}
-                            disabled={checkOutMutation.isPending}
-                            className="py-1.5 px-3 bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-gray-200 disabled:opacity-50"
-                        >
-                            <LogOut size={14}/> Saída
-                        </button>
-                    </div>
-                </div>
-              );
-            })}
+                          {kid.alergias && (
+                              <div className="mt-3 ml-2 bg-red-50 text-red-700 text-[11px] font-bold p-2 rounded border border-red-100 flex items-start gap-2">
+                                  <AlertTriangle size={14} className="shrink-0" />
+                                  <span>ALERGIA: {kid.alergias}</span>
+                              </div>
+                          )}
+                      </div>
 
-            {kids.length === 0 && (
-                <div className="col-span-full py-16 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
-                    <Baby size={48} className="text-gray-300 mb-3" />
-                    <p className="font-medium text-gray-500">Nenhuma criança na sala no momento.</p>
-                    <p className="text-sm mt-1">Aguardando novos check-ins...</p>
-                </div>
-            )}
-        </div>
+                      <div className="mt-4 ml-2 pt-4 border-t border-gray-100 flex items-center justify-between">
+                          <div className="text-xs font-medium flex flex-col">
+                              <span className="text-gray-400">Permanência:</span>
+                              <span className={`${isOverdue ? 'text-amber-600' : 'text-indigo-600'} font-bold`}>
+                                  {permanencia.texto}
+                              </span>
+                          </div>
+                          <button 
+                              onClick={() => handleCheckOutClick(kid)}
+                              disabled={checkOutMutation.isPending}
+                              className="py-1.5 px-3 bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 border border-gray-200 disabled:opacity-50"
+                          >
+                              <LogOut size={14}/> Saída
+                          </button>
+                      </div>
+                  </div>
+                );
+              })}
+
+              {kidsFiltradas.length === 0 && (
+                  <div className="col-span-full py-16 flex flex-col items-center justify-center text-gray-400 bg-gray-50/50 rounded-2xl border-2 border-dashed border-gray-200">
+                      <Baby size={48} className="text-gray-300 mb-3" />
+                      <p className="font-medium text-gray-500">
+                        {activeTab === 'Todas' ? 'Nenhuma criança na sala no momento.' : `Nenhuma criança na sala ${activeTab}.`}
+                      </p>
+                      <p className="text-sm mt-1">Aguardando novos check-ins...</p>
+                  </div>
+              )}
+          </div>
+        </>
       )}
     </div>
   );
