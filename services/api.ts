@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product, ProductFormData, Order, OrderRequestDTO, PublicOrderRequestDTO, PublicProductCheckoutRequestDTO } from '../types';
+import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product, ProductFormData, Order, OrderRequestDTO, PublicOrderRequestDTO, PublicOrderCheckoutRequestDTO } from '../types';
 
 export const api = axios.create({
   baseURL: 'http://localhost:8080', 
@@ -309,10 +309,10 @@ export const orderApi = {
     const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/pedidos/publico`, payload);
     return data;
   },
-  // Nova função para checkout de produto público, alinhada com o fluxo de eventos
-  createProductCheckout: async (igrejaId: string, payload: PublicProductCheckoutRequestDTO): Promise<CheckoutResponse> => {
-    const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/checkout/publico/produtos`, payload);
-    return data;
+  // Função para checkout de um pedido público existente
+  createOrderCheckout: async (igrejaId: string, orderId: string, payload: PublicOrderCheckoutRequestDTO): Promise<CheckoutResponse> => {
+    const response = await api.post<CheckoutResponse>(`/api/v1/igrejas/${igrejaId}/checkout/publico/pedidos/${orderId}`, payload);
+    return response.data;
   }
 };
 

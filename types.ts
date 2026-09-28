@@ -161,17 +161,6 @@ export interface PublicOrderRequestDTO {
   itens: PublicOrderItemRequestDTO[];
 }
 
-// Novo tipo para requisição de checkout de produto público
-export interface PublicProductCheckoutRequestDTO {
-  nomeComprador: string;
-  emailComprador: string;
-  telefoneComprador: string;
-  cpfComprador?: string;
-  produtoId: string;
-  quantidade: number;
-  amount: number; // Valor total para o gateway de pagamento
-}
-
 export interface OrderItem {
   id: string;
   produto: Product;

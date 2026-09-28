@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { ShoppingBag, DollarSign, Package, Loader, AlertCircle, ArrowLeft, User, Mail, Phone, CreditCard, CheckCircle } from 'lucide-react';
-import { Product, PublicProductCheckoutRequestDTO } from '../types';
+import { ShoppingBag, DollarSign, Package, Loader, AlertCircle, ArrowLeft, User, Mail, Phone, CreditCard } from 'lucide-react';
+import { Product, PublicOrderRequestDTO, PublicOrderItemRequestDTO, PublicOrderCheckoutRequestDTO, Order } from '../types';
 import { productApi, orderApi } from '../services/api';
 import { useApp } from '../contexts/AppContext';
 import { toast } from 'sonner';
@@ -36,23 +36,47 @@ const PublicProductPurchasePage: React.FC = () => {
 
   const totalValue = product ? product.preco * quantity : 0;
 
-  const purchaseMutation = useMutation({
-    mutationFn: async (checkoutRequest: PublicProductCheckoutRequestDTO) => {
+  // Mutation para criar o pedido (primeiro passo)
+  const createOrderMutation = useMutation({
+    mutationFn: async (orderRequest: PublicOrderRequestDTO) => {
       if (!church) throw new Error("Igreja não selecionada."); // Should be caught by !church check earlier
-      return orderApi.createProductCheckout(church.id, checkoutRequest);
+      return orderApi.createPublic(church.id, orderRequest);
     },
-    onSuccess: (checkoutResponse) => {
-      if (checkoutResponse.checkoutUrl) {
-        toast.success("Pedido criado! Redirecionando para o pagamento...");
-        window.location.href = checkoutResponse.checkoutUrl;
+    onSuccess: (order: Order) => {
+      // Se o backend já retornou um link de pagamento direto, usa ele
+      if (order.linkPagamento) {
+        toast.success("Pedido criado! Redirecionando para o pagamento...", { duration: 3000 });
+        window.location.href = order.linkPagamento;
       } else {
-        toast.error("Erro ao gerar link de pagamento. Tente novamente.");
+        // Se não, inicia o checkout para gerar o link de pagamento
+        const clientReferenceId = crypto.randomUUID();
+        const checkoutPayload: PublicOrderCheckoutRequestDTO = {
+          orderId: order.id,
+          clientReferenceId: clientReferenceId,
+          amount: totalValue,
+          description: product!.nome + (product!.descricao ? " - " + product!.descricao : ""),
+          quantidade: quantity,
+        };
+        checkoutMutation.mutate(checkoutPayload);
       }
     },
     onError: (error: any) => {
-      const message = error.response?.data?.message || "Erro ao finalizar a compra.";
+      const message = error.response?.data?.message || "Erro ao criar o pedido.";
       toast.error(message);
     },
+  });
+
+  // Mutation para iniciar o checkout (segundo passo, se necessário)
+  const checkoutMutation = useMutation({
+    mutationFn: async (checkoutRequest: PublicOrderCheckoutRequestDTO) => {
+      if (!church) throw new Error("Igreja não selecionada.");
+      return orderApi.createOrderCheckout(church.id, checkoutRequest.orderId, checkoutRequest);
+    },
+    onSuccess: (checkoutResponse) => {
+      toast.success("Redirecionando para o pagamento...", { duration: 3000 });
+      window.location.href = checkoutResponse.checkoutUrl;
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || "Erro ao gerar link de pagamento."),
   });
 
   const handlePurchase = async (e: React.FormEvent) => {
@@ -72,13 +96,17 @@ const PublicProductPurchasePage: React.FC = () => {
       return;
     }
     
-    const checkoutRequest: PublicProductCheckoutRequestDTO = {
-      ...buyerInfo,
+    // Primeiro, cria o PublicOrderRequestDTO para o serviço orderApi.createPublic
+    const orderItem: PublicOrderItemRequestDTO = {
       produtoId: product.id,
       quantidade: quantity,
-      amount: totalValue, // totalValue is calculated in the component
     };
-    purchaseMutation.mutate(checkoutRequest);
+
+    const orderRequest: PublicOrderRequestDTO = {
+        ...buyerInfo,
+        itens: [orderItem],
+    };
+    createOrderMutation.mutate(orderRequest);
   };
 
   if (!church) {
@@ -156,7 +184,7 @@ const PublicProductPurchasePage: React.FC = () => {
           <div>
             <h1 className="text-3xl font-bold text-[#0f172a] mb-3">{product.nome}</h1>
             <p className="text-gray-600 text-lg mb-6 leading-relaxed">
-              {product.descricao || 'Nenhuma descrição disponível para este produto.'}
+              {product.descricao }
             </p>
 
             <div className="flex items-center justify-between mb-6 border-t border-b border-gray-100 py-4">
@@ -247,9 +275,9 @@ const PublicProductPurchasePage: React.FC = () => {
 
             <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
               <span className="text-2xl font-extrabold text-[#0f172a]">Total: R$ {totalValue.toFixed(2)}</span>
-              <button
+              <button 
                 type="submit"
-                disabled={product.estoque === 0 || purchaseMutation.isPending}
+                disabled={product.estoque === 0 || createOrderMutation.isPending || checkoutMutation.isPending}
                 className="btn-primary py-3 px-6 text-lg shadow-lg flex items-center gap-2"
               >
                 {purchaseMutation.isPending ? <Loader className="animate-spin" size={20} /> : <><ShoppingBag size={20} /> Finalizar Compra</>}
