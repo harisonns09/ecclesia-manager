@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { ShoppingBag, DollarSign, Package, Loader, AlertCircle, ArrowLeft, User, Mail, Phone, CreditCard } from 'lucide-react';
@@ -36,27 +36,40 @@ const PublicProductPurchasePage: React.FC = () => {
 
   const totalValue = product ? product.preco * quantity : 0;
 
-  // Mutation para criar o pedido (primeiro passo)
-  const createOrderMutation = useMutation({
+  // Passo 2: Mutation para iniciar o checkout
+  const checkoutMutation = useMutation({
+    mutationFn: async (checkoutRequest: PublicOrderRequestDTO) => {
+      if (!church) throw new Error("Igreja não selecionada.");
+      return orderApi.createProductCheckout( checkoutRequest);
+    },
+    onSuccess: (checkoutResponse) => {
+      toast.success("Redirecionando para o pagamento...", { duration: 3000 });
+      window.location.href = checkoutResponse.checkoutUrl;
+    },
+    onError: (error: any) => toast.error(error.response?.data?.message || "Erro ao gerar link de pagamento."),
+  });
+
+  // Passo 1: Mutation para criar o pedido
+const createOrderMutation = useMutation({
     mutationFn: async (orderRequest: PublicOrderRequestDTO) => {
-      if (!church) throw new Error("Igreja não selecionada."); // Should be caught by !church check earlier
-      return orderApi.createPublic(church.id, orderRequest);
+      if (!church) throw new Error("Igreja não selecionada.");
+      return orderApi.createOrder(church.id, orderRequest);
     },
     onSuccess: (order: Order) => {
-      // Se o backend já retornou um link de pagamento direto, usa ele
       if (order.linkPagamento) {
         toast.success("Pedido criado! Redirecionando para o pagamento...", { duration: 3000 });
         window.location.href = order.linkPagamento;
       } else {
-        // Se não, inicia o checkout para gerar o link de pagamento
-        const clientReferenceId = crypto.randomUUID();
-        const checkoutPayload: PublicOrderCheckoutRequestDTO = {
-          orderId: order.id,
-          clientReferenceId: clientReferenceId,
-          amount: totalValue,
+        // Preenchendo todos os campos obrigatórios do PublicOrderRequestDTO
+        const checkoutPayload: PublicOrderRequestDTO = {
+          ...buyerInfo, // Espalha nomeComprador, emailComprador, telefoneComprador, cpfComprador
+          produtoId: Number(product!.id),
           description: product!.nome + (product!.descricao ? " - " + product!.descricao : ""),
           quantidade: quantity,
+          amount: totalValue,
+          codigoCompra: order.id.toString() // Usa o ID do pedido que acabou de ser criado no backend
         };
+        
         checkoutMutation.mutate(checkoutPayload);
       }
     },
@@ -66,23 +79,9 @@ const PublicProductPurchasePage: React.FC = () => {
     },
   });
 
-  // Mutation para iniciar o checkout (segundo passo, se necessário)
-  const checkoutMutation = useMutation({
-    mutationFn: async (checkoutRequest: PublicOrderCheckoutRequestDTO) => {
-      if (!church) throw new Error("Igreja não selecionada.");
-      return orderApi.createOrderCheckout(church.id, checkoutRequest.orderId, checkoutRequest);
-    },
-    onSuccess: (checkoutResponse) => {
-      toast.success("Redirecionando para o pagamento...", { duration: 3000 });
-      window.location.href = checkoutResponse.checkoutUrl;
-    },
-    onError: (error: any) => toast.error(error.response?.data?.message || "Erro ao gerar link de pagamento."),
-  });
-
   const handlePurchase = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Basic validation before attempting mutation
     if (!church) {
       toast.error("Nenhuma igreja selecionada.");
       return;
@@ -96,15 +95,20 @@ const PublicProductPurchasePage: React.FC = () => {
       return;
     }
     
-    // Primeiro, cria o PublicOrderRequestDTO para o serviço orderApi.createPublic
     const orderItem: PublicOrderItemRequestDTO = {
       produtoId: product.id,
       quantidade: quantity,
     };
 
+    const clientReferenceId = crypto.randomUUID(); // Este será o seu codigoCompra
+
     const orderRequest: PublicOrderRequestDTO = {
         ...buyerInfo,
-        itens: [orderItem],
+        produtoId: Number(product.id),
+        description: product.nome + (product.descricao ? " - " + product.descricao : ""),
+        quantidade: quantity,
+        amount: totalValue,
+        codigoCompra: clientReferenceId
     };
     createOrderMutation.mutate(orderRequest);
   };
@@ -129,7 +133,6 @@ const PublicProductPurchasePage: React.FC = () => {
     );
   }
 
-  // Tratamento de erros mais específico
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-red-600 bg-red-50 rounded-lg">
@@ -140,7 +143,7 @@ const PublicProductPurchasePage: React.FC = () => {
     );
   }
 
-  if (!product) { // Se não há erro na requisição, mas o produto é nulo (não encontrado)
+  if (!product) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-red-600 bg-red-50 rounded-lg">
         <AlertCircle size={40} className="mb-2" />
@@ -150,7 +153,7 @@ const PublicProductPurchasePage: React.FC = () => {
     );
   }
 
-  if (!product.ativo) { // Se o produto existe, mas está inativo
+  if (!product.ativo) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-red-600 bg-red-50 rounded-lg">
         <AlertCircle size={40} className="mb-2" />
@@ -159,6 +162,9 @@ const PublicProductPurchasePage: React.FC = () => {
       </div>
     );
   }
+
+  // Consolida o estado de carregamento para bloquear o formulário e o botão
+  const isProcessing = createOrderMutation.isPending || checkoutMutation.isPending;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 animate-in fade-in duration-500">
@@ -212,7 +218,7 @@ const PublicProductPurchasePage: React.FC = () => {
                 value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, Math.min(product.estoque, Number(e.target.value))))}
                 className="input-field w-24 text-center"
-                disabled={product.estoque === 0}
+                disabled={product.estoque === 0 || isProcessing}
               />
               {product.estoque === 0 && <p className="text-red-500 text-sm mt-1">Produto esgotado.</p>}
             </div>
@@ -229,6 +235,7 @@ const PublicProductPurchasePage: React.FC = () => {
                       className="input-field !pl-10"
                       value={buyerInfo.nomeComprador}
                       onChange={(e) => setBuyerInfo({ ...buyerInfo, nomeComprador: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -241,6 +248,7 @@ const PublicProductPurchasePage: React.FC = () => {
                       className="input-field !pl-10"
                       value={buyerInfo.emailComprador}
                       onChange={(e) => setBuyerInfo({ ...buyerInfo, emailComprador: e.target.value })}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -254,6 +262,7 @@ const PublicProductPurchasePage: React.FC = () => {
                       value={buyerInfo.telefoneComprador}
                       onChange={(e) => setBuyerInfo({ ...buyerInfo, telefoneComprador: formatPhone(e.target.value) })}
                       maxLength={15}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -267,6 +276,7 @@ const PublicProductPurchasePage: React.FC = () => {
                       value={buyerInfo.cpfComprador}
                       onChange={(e) => setBuyerInfo({ ...buyerInfo, cpfComprador: e.target.value.replace(/\D/g, '') })}
                       maxLength={11}
+                      disabled={isProcessing}
                     />
                   </div>
                 </div>
@@ -277,10 +287,10 @@ const PublicProductPurchasePage: React.FC = () => {
               <span className="text-2xl font-extrabold text-[#0f172a]">Total: R$ {totalValue.toFixed(2)}</span>
               <button 
                 type="submit"
-                disabled={product.estoque === 0 || createOrderMutation.isPending || checkoutMutation.isPending}
+                disabled={product.estoque === 0 || isProcessing}
                 className="btn-primary py-3 px-6 text-lg shadow-lg flex items-center gap-2"
               >
-                {purchaseMutation.isPending ? <Loader className="animate-spin" size={20} /> : <><ShoppingBag size={20} /> Finalizar Compra</>}
+                {isProcessing ? <Loader className="animate-spin" size={20} /> : <><ShoppingBag size={20} /> Finalizar Compra</>}
               </button>
             </div>
           </form>

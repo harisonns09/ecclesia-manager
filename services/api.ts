@@ -2,8 +2,8 @@ import axios from 'axios';
 import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product, ProductFormData, Order, OrderRequestDTO, PublicOrderRequestDTO, PublicOrderCheckoutRequestDTO } from '../types';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8080', 
-  //baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
+ // baseURL: 'http://localhost:8080', 
+  baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
 });
 
 api.interceptors.request.use((config) => {
@@ -300,19 +300,17 @@ export const orderApi = {
     return data;
   },
 
-  create: async (igrejaId: string, payload: OrderRequestDTO): Promise<Order> => {
+
+  createOrder: async (igrejaId: string, payload: PublicOrderRequestDTO): Promise<Order> => {
+    // Assumindo um endpoint público para pedidos que aceita detalhes do comprador diretamente
     const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/pedidos`, payload);
     return data;
   },
-  createPublic: async (igrejaId: string, payload: PublicOrderRequestDTO): Promise<Order> => {
-    // Assumindo um endpoint público para pedidos que aceita detalhes do comprador diretamente
-    const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/pedidos/publico`, payload);
-    return data;
-  },
   // Função para checkout de um pedido público existente
-  createOrderCheckout: async (igrejaId: string, orderId: string, payload: PublicOrderCheckoutRequestDTO): Promise<CheckoutResponse> => {
-    const response = await api.post<CheckoutResponse>(`/api/v1/igrejas/${igrejaId}/checkout/publico/pedidos/${orderId}`, payload);
-    return response.data;
+  createProductCheckout: async (payload: PublicOrderRequestDTO): Promise<{ checkoutUrl: string }> => {
+    // Aponta para a nova rota do CheckoutController
+    const { data } = await api.post(`/api/checkout/publico/produtos/${payload.produtoId}`, payload);
+    return data;
   }
 };
 

@@ -157,8 +157,20 @@ export interface PublicOrderRequestDTO {
   nomeComprador: string;
   emailComprador: string;
   telefoneComprador: string;
-  cpfComprador?: string; // Opcional, mas útil para gateways de pagamento
-  itens: PublicOrderItemRequestDTO[];
+  cpfComprador?: string;
+  produtoId: number;
+  description: string;
+  quantidade: number;
+  amount: number;
+  codigoCompra: string;
+}
+
+export interface PublicOrderCheckoutRequestDTO {
+  orderId: string;
+  clientReferenceId: string;
+  amount: number;
+  description: string;
+  quantidade: number;
 }
 
 export interface OrderItem {
