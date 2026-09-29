@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product } from '../types';
+import { Member, Transaction, Event, Ministry, Scale, SmallGroup, PrayerRequest, Church, CheckoutResponse, CheckInKids, CheckInKidsRequest, Product, ProductFormData, Order, OrderRequestDTO, PublicOrderRequestDTO, PublicOrderCheckoutRequestDTO } from '../types';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8080', 
-  //baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
+ // baseURL: 'http://localhost:8080', 
+  baseURL: 'https://ecclesia-backend-1098108839645.us-central1.run.app'
 });
 
 api.interceptors.request.use((config) => {
@@ -265,25 +265,53 @@ export const smallGroupApi = {
 };
 
 export const productApi = {
-  getByChurch: async (churchId: string) => {
-    const response = await api.get<Product[]>(`/api/produtos/igrejas/${churchId}`);
-    return response.data;
+  getAll: async (igrejaId: string): Promise<Product[]> => {
+    const { data } = await api.get(`/api/v1/igrejas/${igrejaId}/produtos`);
+    return data;
   },
-  getById: async (churchId: string, productId: string) => {
-    const response = await api.get<Product>(`/api/produtos/igrejas/${churchId}/${productId}`);
-    return response.data;
+
+  getById: async (igrejaId: string, id: string): Promise<Product> => {
+    const { data } = await api.get(`/api/v1/igrejas/${igrejaId}/produtos/${id}`);
+    return data;
   },
-  create: async (churchId: string, product: Omit<Product, 'id'>) => {
-    const response = await api.post<Product>(`/api/produtos/igrejas/${churchId}`, product);
-    return response.data;
+
+  create: async (igrejaId: string, payload: ProductFormData): Promise<Product> => {
+    const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/produtos`, payload);
+    return data;
   },
-  update: async (churchId: string, productId: string, product: Partial<Product>) => {
-    const response = await api.put<Product>(`/api/produtos/igrejas/${churchId}/${productId}`, product);
-    return response.data;
+
+  update: async (igrejaId: string, id: string, payload: ProductFormData): Promise<Product> => {
+    const { data } = await api.put(`/api/v1/igrejas/${igrejaId}/produtos/${id}`, payload);
+    return data;
   },
-  delete: async (churchId: string, productId: string) => {
-    await api.delete(`/api/produtos/igrejas/${churchId}/${productId}`);
+  delete: async (igrejaId: string, id: string) => {
+    await api.delete(`/api/v1/igrejas/${igrejaId}/produtos/${id}`);
+  }
+};
+
+export const orderApi = {
+  getAll: async (igrejaId: string): Promise<Order[]> => {
+    const { data } = await api.get(`/api/v1/igrejas/${igrejaId}/pedidos`);
+    return data;
   },
+
+  getById: async (igrejaId: string, id: string): Promise<Order> => {
+    const { data } = await api.get(`/api/v1/igrejas/${igrejaId}/pedidos/${id}`);
+    return data;
+  },
+
+
+  createOrder: async (igrejaId: string, payload: PublicOrderRequestDTO): Promise<Order> => {
+    // Assumindo um endpoint público para pedidos que aceita detalhes do comprador diretamente
+    const { data } = await api.post(`/api/v1/igrejas/${igrejaId}/pedidos`, payload);
+    return data;
+  },
+  // Função para checkout de um pedido público existente
+  createProductCheckout: async (payload: PublicOrderRequestDTO): Promise<{ checkoutUrl: string }> => {
+    // Aponta para a nova rota do CheckoutController
+    const { data } = await api.post(`/api/checkout/publico/produtos/${payload.produtoId}`, payload);
+    return data;
+  }
 };
 
 export const prayerRequestApi = {

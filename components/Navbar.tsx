@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, X, Home, Calendar, LogIn, ArrowLeft, LogOut, LayoutDashboard } from 'lucide-react';
+import { Menu, X, Home, Calendar, LogIn, ArrowLeft, LogOut, LayoutDashboard, ShoppingBag} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 
@@ -27,6 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleNavigation = (id: string) => {
     if (id === 'home') navigate('/');
     else if (id === 'events-public') navigate('/eventos');
+    else if (id === 'store-public') navigate('/loja');
     setActiveTab(id);
     setIsOpen(false);
   };
@@ -34,6 +35,7 @@ const Navbar: React.FC<NavbarProps> = ({
   const navItems = [
     { id: 'home', label: 'Início', icon: <Home size={18} /> },
     { id: 'events-public', label: 'Eventos', icon: <Calendar size={18} /> },
+    { id: 'store-public', label: 'Loja', icon: <ShoppingBag size={18} /> },
   ];
 
   const churchName = currentChurch?.name || 'Ecclesia Manager';

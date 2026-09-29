@@ -18,7 +18,7 @@ const AdminProductsPage: React.FC = () => {
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['products', church?.id],
-    queryFn: () => productApi.getByChurch(church!.id),
+    queryFn: () => productApi.getAll(church!.id),
     enabled: !!church?.id,
   });
 
@@ -92,11 +92,7 @@ const AdminProductsPage: React.FC = () => {
                   <tr key={product.id} className="hover:bg-[#eff6ff]/40 group transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-4">
-                        <img 
-                          src={product.imageUrl || 'https://via.placeholder.com/150'} 
-                          alt={product.nome} 
-                          className="w-12 h-12 rounded-lg object-cover bg-gray-100"
-                        />
+                        
                         <div>
                           <div className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{product.nome}</div>
                           <div className="text-xs text-gray-500 line-clamp-1 max-w-xs">{product.descricao}</div>

@@ -34,7 +34,7 @@ const ProductFormPage: React.FC = () => {
         handleSubmit,
         reset,
         watch,
-        formState: { errors }
+        formState: { errors, isSubmitting }
     } = useForm<ProductFormData>({
         resolver: zodResolver(productSchema) as any, // <-- Adicione 'as any' aqui
         defaultValues: {
@@ -91,15 +91,11 @@ const ProductFormPage: React.FC = () => {
     const saveMutation = useMutation({
         mutationFn: (formData: ProductFormData) => {
             if (!church) throw new Error("Igreja não selecionada.");
-
-            const payload = {
-                ...formData,
-                igrejaId: church.id
-            };
-
+            
+            // productApi.create e productApi.update já esperam ProductFormData como payload
             return isEditing
-                ? productApi.update(church.id, id!, payload)
-                : productApi.create(church.id, payload);
+                ? productApi.update(church.id, id!, formData)
+                : productApi.create(church.id, formData);
         },
         onSuccess: () => {
             toast.success("Produto salvo com sucesso!");
@@ -117,7 +113,7 @@ const ProductFormPage: React.FC = () => {
 
     if (isLoading) return <div className="flex justify-center p-10"><Loader className="animate-spin text-blue-600" /></div>;
 
-    // Opcional: Como o useEffect de isError agora redireciona, este componente de fallback 
+    // Opcional: Como o useEffect de isError agora redireciona, este componente de fallback
     // pode piscar muito brevemente, mas é bom mantê-lo por precaução.
     if (isError) return (
         <div className="flex flex-col items-center justify-center p-10 text-red-600 bg-red-50 rounded-lg">
@@ -198,7 +194,7 @@ const ProductFormPage: React.FC = () => {
                     <button type="button" onClick={() => navigate('/admin/products')} className="btn-secondary">
                         Cancelar
                     </button>
-                    <button type="submit" disabled={saveMutation.isPending} className="btn-primary shadow-lg">
+                    <button type="submit" disabled={saveMutation.isPending || isSubmitting} className="btn-primary shadow-lg">
                         {saveMutation.isPending ? <Loader className="animate-spin" /> : <Save size={20} />}
                         <span>{isEditing ? 'Salvar Alterações' : 'Criar Produto'}</span>
                     </button>

@@ -23,6 +23,8 @@ const Ministries = lazy(() => import('./components/Ministries'));
 const SmallGroups = lazy(() => import('./components/SmallGroups'));
 const Events = lazy(() => import('./components/Events'));
 const Financials = lazy(() => import('./components/Financials'));
+const PublicProductPurchasePage = lazy(() => import('./components/PublicProductPurchasePage'));
+const PublicStorePage = lazy(() => import('./components/PublicStorePage'));
 const AdminProductsPage = lazy(() => import('./components/AdminProductsPage'));
 const ProductFormPage = lazy(() => import('./components/ProductFormPage'));
 const ChurchSelector = lazy(() => import('./components/ChurchSelector'));
@@ -88,6 +90,44 @@ const AppRoutes = () => {
           )
         } />
 
+        {/* --- LOJA PÚBLICA --- */}
+        <Route path="/loja" element={
+          !currentChurch ? <Navigate to="/" /> : (
+            <div className="min-h-screen bg-gray-50">
+              <Navbar activeTab="store-public" setActiveTab={() => { }} />
+              <main className="max-w-7xl mx-auto px-4 py-8">
+                <PublicStorePage />
+              </main>
+              <CookieConsent />
+            </div>
+          )
+        } />
+
+        {/* --- PÁGINA DE COMPRA DE PRODUTO PÚBLICO --- */}
+        <Route path="/loja/comprar/:productId" element={
+          !currentChurch ? <Navigate to="/" /> : (
+            <div className="min-h-screen bg-gray-50">
+              <Navbar activeTab="store-public" setActiveTab={() => { }} />
+              <main className="max-w-7xl mx-auto px-4 py-8">
+                <PublicProductPurchasePage />
+              </main>
+              <CookieConsent />
+            </div>
+          )
+        } />
+
+        {/* --- PÁGINA DE COMPRA DE PRODUTO PÚBLICO --- */}
+        <Route path="/loja/comprar/:productId" element={
+          !currentChurch ? <Navigate to="/" /> : (
+            <div className="min-h-screen bg-gray-50">
+              <Navbar activeTab="store-public" setActiveTab={() => { }} />
+              <main className="max-w-7xl mx-auto px-4 py-8">
+                <PublicProductPurchasePage />
+              </main>
+              <CookieConsent />
+            </div>
+          )
+        } />
         {/* --- LOGIN --- */}
         <Route path="/login" element={
           isAuthenticated ? <Navigate to="/admin/dashboard" /> : <Login onBack={() => exitChurch()} />
