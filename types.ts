@@ -183,7 +183,9 @@ export interface OrderItem {
 export interface Order {
   id: string;
   igrejaId: string;
-  compradorId: string;
+  comprador?: string;
+  emailComprador?: string;
+  telefoneComprador?: string;
   itens: OrderItem[];
   valorTotal: number;
   statusPagamento: 'PENDENTE' | 'PAGO' | 'CANCELADO';

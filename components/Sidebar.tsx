@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, Activity, Shield, Users, Wallet, Calendar, 
-  LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby, ShoppingBag,
-  ChevronDown, ChevronRight, Settings, UsersRound 
+  LogOut, X, Music, Home, HeartHandshake, ArrowLeft, Baby, ShoppingBag, Package, Receipt,
+  ChevronDown, ChevronRight, Settings, UsersRound
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 
@@ -58,7 +58,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, setIsOpen }) => {
         { id: '/admin/ministries', label: 'Ministérios', icon: <Music size={18} />, requiredPermission: 'GERENCIAR_MINISTERIOS' },
         { id: '/admin/small-groups', label: 'Células / Grupos', icon: <Home size={18} />, requiredPermission: 'GERENCIAR_GRUPOS' },
         { id: '/admin/events', label: 'Eventos', icon: <Calendar size={18} />, requiredPermission: 'GERENCIAR_EVENTOS' },
-        { id: '/admin/products', label: 'Loja', icon: <ShoppingBag size={18} /> },
+      ]
+    },
+    {
+      id: 'loja',
+      label: 'Loja',
+      icon: <ShoppingBag size={20} />,
+      requiredPermission: 'GERENCIAR_LOJA',
+      subItems: [
+        { id: '/admin/products', label: 'Produtos', icon: <Package size={18} /> },
+        { id: '/admin/orders', label: 'Pedidos', icon: <Receipt size={18} /> },
       ]
     },
     {
