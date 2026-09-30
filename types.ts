@@ -183,7 +183,10 @@ export interface OrderItem {
 export interface Order {
   id: string;
   igrejaId: string;
-  compradorId: string;
+  compradorId?: string; // Opcional para visitantes
+  nomeComprador?: string;
+  emailComprador?: string;
+  telefoneComprador?: string;
   itens: OrderItem[];
   valorTotal: number;
   statusPagamento: 'PENDENTE' | 'PAGO' | 'CANCELADO';

@@ -27,6 +27,7 @@ const PublicProductPurchasePage = lazy(() => import('./components/PublicProductP
 const PublicStorePage = lazy(() => import('./components/PublicStorePage'));
 const AdminProductsPage = lazy(() => import('./components/AdminProductsPage'));
 const ProductFormPage = lazy(() => import('./components/ProductFormPage'));
+const AdminOrdersPage = lazy(() => import('./components/AdminOrdersPage'));
 const ChurchSelector = lazy(() => import('./components/ChurchSelector'));
 const PublicHome = lazy(() => import('./components/PublicHome'));
 const Login = lazy(() => import('./components/Login'));
@@ -170,9 +171,13 @@ const AppRoutes = () => {
             <Route path="events/edit/:id" element={<EventFormPage />} />
             <Route path="events/:id/attendees" element={<EventAttendeesPage />} />
             <Route path="events/:id/finance" element={<EventFinancePage />} />
-            <Route path="products" element={<AdminProductsPage />} />
-            <Route path="products/new" element={<ProductFormPage />} />
-            <Route path="products/edit/:id" element={<ProductFormPage />} />
+            
+            <Route element={<ProtectedRoute requiredPermission="GERENCIAR_LOJA" />}>
+              <Route path="products" element={<AdminProductsPage />} />
+              <Route path="products/new" element={<ProductFormPage />} />
+              <Route path="products/edit/:id" element={<ProductFormPage />} />
+              <Route path="orders" element={<AdminOrdersPage />} />
+            </Route>
             <Route path="visitors" element={<Visitors />} />
 
             {/* Financeiro Restrito */}
