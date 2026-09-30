@@ -19,7 +19,7 @@ const AdminOrdersPage: React.FC = () => {
 
   const filteredOrders = orders.filter(order => 
     order.id.toString().includes(searchTerm) ||
-    order.nomeComprador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    order.comprador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.emailComprador?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -118,7 +118,7 @@ const AdminOrdersPage: React.FC = () => {
                   <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                     <td className="p-4 font-medium text-gray-900">#{order.id}</td>
                     <td className="p-4">
-                      <div className="font-medium text-gray-900">{order.nomeComprador || 'Visitante'}</div>
+                      <div className="font-medium text-gray-900">{order.comprador || 'Visitante'}</div>
                       <div className="text-sm text-gray-500">{order.emailComprador}</div>
                     </td>
                     <td className="p-4 text-gray-600">
@@ -166,7 +166,7 @@ const AdminOrdersPage: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs text-gray-500">Nome</p>
-                    <p className="font-medium">{selectedOrder.nomeComprador}</p>
+                    <p className="font-medium">{selectedOrder.comprador}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Email</p>

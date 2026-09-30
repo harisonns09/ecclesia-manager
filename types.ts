@@ -183,8 +183,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   igrejaId: string;
-  compradorId?: string; // Opcional para visitantes
-  nomeComprador?: string;
+  comprador?: string;
   emailComprador?: string;
   telefoneComprador?: string;
   itens: OrderItem[];
