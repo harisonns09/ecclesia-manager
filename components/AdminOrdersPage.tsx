@@ -107,6 +107,7 @@ const AdminOrdersPage: React.FC = () => {
                 <tr className="bg-gray-50 text-gray-600 text-sm uppercase tracking-wider">
                   <th className="p-4 font-medium">ID Pedido</th>
                   <th className="p-4 font-medium">Cliente</th>
+                  <th className="p-4 font-medium">Descrição</th>
                   <th className="p-4 font-medium">Data</th>
                   <th className="p-4 font-medium">Status</th>
                   <th className="p-4 font-medium text-right">Valor Total</th>
@@ -120,6 +121,9 @@ const AdminOrdersPage: React.FC = () => {
                     <td className="p-4">
                       <div className="font-medium text-gray-900">{order.comprador || 'Visitante'}</div>
                       <div className="text-sm text-gray-500">{order.emailComprador}</div>
+                    </td>
+                    <td className="p-4">
+                      <div className="font-medium text-gray-900">{order.descricao}</div>
                     </td>
                     <td className="p-4 text-gray-600">
                       {order.dataCriacao ? new Date(order.dataCriacao).toLocaleDateString('pt-BR') : 'N/A'}
