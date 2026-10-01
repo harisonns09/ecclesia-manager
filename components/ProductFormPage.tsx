@@ -18,6 +18,7 @@ const productSchema = z.object({
     estoque: z.coerce.number().int("O estoque deve ser um número inteiro.").min(0, "O estoque não pode ser negativo.").default(0),
     imageUrl: z.string().url("A URL da imagem deve ser válida.").optional().or(z.literal('')),
     ativo: z.boolean().default(true),
+    combo: z.boolean().default(false),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
