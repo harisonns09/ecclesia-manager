@@ -131,7 +131,8 @@ export interface Product {
   estoque: number;
   imageUrl?: string;
   ativo: boolean;
-  igrejaId?: string; // Opcional porque a rota já identifica a igreja
+  igrejaId?: string;
+  combo:boolean; // Opcional porque a rota já identifica a igreja
 }
 
 export type ProductFormData = Omit<Product, 'id' | 'igrejaId'>;
@@ -192,6 +193,7 @@ export interface Order {
   linkPagamento?: string;
   transacaoId?: string;
   dataCriacao: string;
+  descricao: string;
 }
 
 // ========================================================================
