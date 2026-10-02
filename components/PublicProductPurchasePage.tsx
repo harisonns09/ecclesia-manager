@@ -37,8 +37,8 @@ const PublicProductPurchasePage: React.FC = () => {
 
   // Função para calcular o valor adicional do combo
   const getAddOnPrice = (comboSelection: string) => {
-    if (comboSelection === 'Refrigerante') return 5.00;
-    if (comboSelection === 'Guaravita') return 2.00;
+    if (comboSelection === 'Refrigerante') return 4.00;
+    if (comboSelection === 'Guaravita') return 3.00;
     return 0; // Caso não tenha adicional ou não seja combo
   };
 
@@ -283,8 +283,8 @@ const PublicProductPurchasePage: React.FC = () => {
                         disabled={isProcessing}
                       >
                         <option value="" disabled>Selecione o acompanhamento...</option>
-                        <option value="Refrigerante">Refrigerante (+ R$ 5,00)</option>
-                        <option value="Guaravita">Guaravita (+ R$ 2,00)</option>
+                        <option value="Refrigerante">Refrigerante (+ R$ 4,00)</option>
+                        <option value="Guaravita">Guaravita (+ R$ 3,00)</option>
                       </select>
                     </div>
                   </div>
