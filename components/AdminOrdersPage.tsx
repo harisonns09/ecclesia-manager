@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, Loader, AlertCircle, ShoppingBag, Eye, X, User, Package, CheckCircle, Clock, XCircle, RefreshCw } from 'lucide-react';
+import { Search, Loader, AlertCircle, ShoppingBag, Eye, X, User, Package, CheckCircle, Clock, XCircle, RefreshCw, DollarSign } from 'lucide-react';
 import { orderApi } from '../services/api';
 import { useApp } from '../contexts/AppContext';
 import { Order } from '../types';
@@ -21,6 +21,28 @@ const AdminOrdersPage: React.FC = () => {
     order.id.toString().includes(searchTerm) ||
     order.comprador?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.emailComprador?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const financialReport = React.useMemo(() => {
+    if (!orders || orders.length === 0) {
+      return {
+        totalRevenue: 0,
+        paidOrdersCount: 0,
+        pendingOrdersCount: 0,
+      };
+    }
+
+    const paidOrders = orders.filter(o => o.statusPagamento === 'PAGO');
+    const pendingOrders = orders.filter(o => o.statusPagamento === 'PENDENTE');
+
+    const totalRevenue = paidOrders.reduce((acc, order) => acc + order.valorTotal, 0);
+
+    return {
+      totalRevenue,
+      paidOrdersCount: paidOrders.length,
+      pendingOrdersCount: pendingOrders.length,
+    };
+  }, [orders]
   );
 
   const getStatusBadge = (status: string) => {
@@ -65,6 +87,29 @@ const AdminOrdersPage: React.FC = () => {
           {isFetched ? 'Atualizar Vendas' : 'Carregar Vendas'}
         </button>
       </div>
+
+      {/* Relatório Financeiro */}
+      {isFetched && orders.length > 0 && (
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex items-center gap-4">
+            <div className="p-3 bg-emerald-100 rounded-full"><DollarSign size={24} className="text-emerald-600"/></div>
+            <div>
+              <p className="text-sm font-bold text-emerald-800">Faturamento (Pago)</p>
+              <p className="text-2xl font-extrabold text-emerald-700 mt-1">
+                R$ {financialReport.totalRevenue.toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <div className="bg-green-50 border border-green-200 p-4 rounded-xl">
+            <p className="text-sm font-bold text-green-800">Pedidos Pagos</p>
+            <p className="text-2xl font-extrabold text-green-700 mt-1">{financialReport.paidOrdersCount}</p>
+          </div>
+          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-xl">
+            <p className="text-sm font-bold text-yellow-800">Pedidos Pendentes</p>
+            <p className="text-2xl font-extrabold text-yellow-700 mt-1">{financialReport.pendingOrdersCount}</p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
